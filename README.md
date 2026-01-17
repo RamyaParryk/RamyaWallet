@@ -1,8 +1,12 @@
-# 💎 Ramya Wallet
+# 💎 RamyaWallet
+
+**🇺🇸 English Version** | **[🇯🇵 日本語版](./README_JP.md)**
+
+---
 
 **Secure, Fast, Simple Solana Wallet built with React Native.**
 
-Ramya Wallet is a non-custodial cryptocurrency wallet designed for the Solana blockchain.
+RamyaWallet is a non-custodial cryptocurrency wallet designed for the Solana blockchain.
 We prioritize user privacy and security.
 
 🔗 **Official Website:** [https://RamyaParryk.github.io/RamyaWallet/](https://RamyaParryk.github.io/RamyaWallet/)
