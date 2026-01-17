@@ -1,9 +1,9 @@
-# 💎 Ramya Wallet
+# 💎 RamyaWallet
 
 ### Secure, Fast, Simple Solana Wallet.
 
 > **Your Keys, Your Crypto.**
-> Ramya Wallet is a non-custodial wallet built for privacy and ease of use on the Solana blockchain.
+> RamyaWallet is a non-custodial wallet built for privacy and ease of use on the Solana blockchain.
 
 ---
 
@@ -29,16 +29,17 @@ Powered by **Jupiter Aggregator**. We ensure you get the best possible rates for
 
 ---
 
-## 📜 Legal & Privacy
+## 🔗 Links & Resources
 
+### 💻 Open Source
+We believe in transparency. You can inspect our code on GitHub.
+* **[View Source Code on GitHub](https://github.com/RamyaParryk/Ramya-Wallet)**
+
+### 📜 Legal & Privacy
 Please read our privacy policy carefully.
-プライバシーポリシーは以下からご確認ください。
 
-### 🇬🇧 English
-* **[Privacy Policy & Terms](./privacy_en.md)**
-
-### 🇯🇵 Japanese
-* **[プライバシーポリシー (日本語)](./privacy_jp.md)**
+* **🇬🇧 [Privacy Policy & Terms](./privacy_en.md)**
+* **🇯🇵 [プライバシーポリシー (日本語)](./privacy_jp.md)**
 
 ---
 
