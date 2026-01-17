@@ -5,7 +5,7 @@
 Ramya Wallet is a non-custodial cryptocurrency wallet designed for the Solana blockchain.
 We prioritize user privacy and security.
 
-🔗 **Official Website:** [https://RamyaParryk.github.io/RamyaWallet/](https://RamyaParryk.github.io/Ramya-Wallet/)
+🔗 **Official Website:** [https://RamyaParryk.github.io/RamyaWallet/](https://RamyaParryk.github.io/RamyaWallet/)
 
 ---
 
