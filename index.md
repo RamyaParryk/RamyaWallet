@@ -33,7 +33,7 @@ Powered by **Jupiter Aggregator**. We ensure you get the best possible rates for
 
 ### 💻 Open Source
 We believe in transparency. You can inspect our code on GitHub.
-* **[View Source Code on GitHub](https://github.com/RamyaParryk/Ramya-Wallet)**
+* **[View Source Code on GitHub](https://github.com/RamyaParryk/RamyaWallet)**
 
 ### 📜 Legal & Privacy
 Please read our privacy policy carefully.
