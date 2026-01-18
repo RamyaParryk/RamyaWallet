@@ -68,7 +68,8 @@ import {
   Share2,
   Percent,
   Globe,
-  Shield
+  Shield,
+  Github
 } from 'lucide-react-native';
 
 // Solana & Crypto Libraries
@@ -124,6 +125,7 @@ const SOL_MINT = "So11111111111111111111111111111111111111112";
 const MY_PLATFORM_FEE_BPS = 40; 
 const MY_FEE_ACCOUNT = "EAW4J7YxLn7yc2QbpNgSzovukKViQowg38nJmQ76RmHj";
 const YOUTUBE_URL = "https://www.youtube.com/@ramyaparryk";
+const GITHUB_URL = "https://github.com/RamyaParryk/RamyaWallet";
 
 const rnBiometrics = new ReactNativeBiometrics();
 
@@ -1845,6 +1847,10 @@ const AboutScreen = ({ t, onBack }: any) => {
     Linking.openURL(YOUTUBE_URL).catch(err => console.error("Couldn't load page", err));
   };
 
+  const openGithub = () => {
+    Linking.openURL(GITHUB_URL).catch(err => console.error("Couldn't load page", err));
+  };
+
   return (
     <View style={styles.content}>
       <HeaderRow title={t('about')} onBack={onBack} />
@@ -1869,6 +1875,19 @@ const AboutScreen = ({ t, onBack }: any) => {
               <ExternalLink size={20} color="#444" />
            </TouchableOpacity>
 
+<TouchableOpacity style={styles.settingItem} onPress={openGithub}>
+              {/* GitHubカラー(黒/濃いグレー)に設定 */}
+              <View style={[styles.settingIcon, {backgroundColor:'#171515'}]}>
+                <Github size={20} color="#fff"/>
+              </View>
+              <View style={{flex:1}}>
+                {/* 翻訳ファイルに 'official_github' がない場合は直接文字を入れてもOK */}
+                <Text style={styles.settingText}>Official GitHub</Text> 
+                <Text style={styles.descTextSmall}>Check Source Code</Text>
+              </View>
+              <ExternalLink size={20} color="#444" />
+           </TouchableOpacity>
+
            <TouchableOpacity style={styles.settingItem} onPress={() => setModalVisible(true)}>
               <View style={styles.settingIcon}><Info size={20} color="#fff"/></View>
               <View style={{flex:1}}>
@@ -1889,7 +1908,7 @@ const AboutScreen = ({ t, onBack }: any) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, {height: '80%'}]}>
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionTitle}>{t('terms_title')}</Text>
+              <Text style={styles.modalTitle}>{t('terms_title')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}><X color="#fff" /></TouchableOpacity>
             </View>
             <ScrollView style={{marginTop: 10}}>
@@ -2040,8 +2059,8 @@ const styles = StyleSheet.create({
   helpDesc: { color: '#aaa', fontSize: 13, lineHeight: 20, marginLeft: 38 },
 
   // 利用規約モーダル用
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  //rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  modalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   termTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
   termText: { color: '#ccc', fontSize: 14, lineHeight: 20, marginBottom: 10 },
 
