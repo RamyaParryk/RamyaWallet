@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, Alert } from 'react-native';
-import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight } from 'lucide-react-native';
+// ★ ExternalLink を消して、X を追加しました
+import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles } from '../styles/globalStyles';
