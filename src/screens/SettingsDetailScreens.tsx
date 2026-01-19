@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, Alert } from 'react-native';
-import { Lock, Check, Youtube, Github, Info, ExternalLink, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight } from 'lucide-react-native';
+import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles } from '../styles/globalStyles';
