@@ -35,3 +35,9 @@ export const fetchTransactionHistory = async (connection: Connection, address: s
     return [];
   }
 };
+
+// アドレスを短縮表示する関数
+export const shortenAddress = (addr: string) => {
+  if (!addr) return '';
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+};
