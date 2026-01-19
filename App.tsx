@@ -110,6 +110,9 @@ import { styles } from './src/styles/globalStyles';
 // Screen
 import { HistoryScreen } from './src/screens/HistoryScreen';
 
+// Screen
+import { SettingsScreen } from './src/screens/SettingsScreen';
+
 // ==========================================
 // 定数・設定 (Configuration)
 // ==========================================
@@ -1036,7 +1039,7 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
             onBack={() => setActiveTab('home')} // タブなのでホームに戻るように設定
           />
         )}
-        {activeTab === 'settings' && <SettingsMenu t={t} onNavigate={onNavigate} onLogout={onLogout} />}
+        {activeTab === 'settings' && <SettingsScreen t={t} onNavigate={onNavigate} onLogout={onLogout} />}
       </View>
       <View style={styles.bottomNav}>
          <NavButton icon={Wallet} label={t('home')} active={activeTab === 'home'} onPress={() => setActiveTab('home')} />
@@ -1111,30 +1114,6 @@ const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
     </View>
   );
 };
-
-const SettingsMenu = ({ t, onNavigate, onLogout }: any) => (
-  <ScrollView style={styles.content}>
-    <Text style={styles.screenTitle}>{t('settings')}</Text>
-    <Text style={styles.sectionHeader}>{t('general')}</Text>
-    <SettingItem icon={Users} title={t('address_book')} onPress={() => onNavigate('address_book')} />
-    <SettingItem icon={ShieldCheck} title={t('security')} onPress={() => onNavigate('settings_security')} />
-    <SettingItem icon={Server} title={t('network')} onPress={() => onNavigate('settings_network')} />
-    <SettingItem icon={Globe} title={t('language')} onPress={() => onNavigate('settings_lang')} />
-
-    <Text style={styles.sectionHeader}>{t('support')}</Text>
-    {/* ★追加: ヘルプ画面へのリンク */}
-    <SettingItem icon={CircleHelp} title={t('help')} onPress={() => onNavigate('settings_help')} />
-
-    {/* ★追加: アバウト画面へのリンク */}
-    <SettingItem icon={Info} title={t('about')} onPress={() => onNavigate('settings_about')} />
-
-    <TouchableOpacity style={[styles.settingItem, {marginTop: 20}]} onPress={onLogout}>
-       <View style={[styles.settingIcon, {backgroundColor:'#3f0f0f'}]}><LogOut size={20} color="#ef4444"/></View>
-       <Text style={[styles.settingText, {color:'#ef4444'}]}>{t('logout')}</Text>
-    </TouchableOpacity>
-    <Text style={styles.versionText}>Version 1.0.0</Text>
-  </ScrollView>
-);
 
 const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
