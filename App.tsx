@@ -107,6 +107,9 @@ import { TRANSLATIONS, useTranslation } from './src/constants/translations';
 // Styleseet
 import { styles } from './src/styles/globalStyles';
 
+// Screen
+import { HistoryScreen } from './src/screens/HistoryScreen';
+
 // ==========================================
 // 定数・設定 (Configuration)
 // ==========================================
@@ -706,6 +709,14 @@ export default function App() {
           notify={showNotification} 
         />
       );
+      case 'history': return (
+        <HistoryScreen 
+          t={t} 
+          connection={connection} 
+          address={wallet?.address} 
+          onBack={() => setCurrentScreen('main')} 
+        />
+      );
       case 'stake': return ( 
         <StakingScreen 
           t={t}
@@ -1017,11 +1028,20 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
           />
         )}
         {activeTab === 'swap' && <Swap t={t} {...props} onRetryFetch={onRetryFetchTokens} />} 
+        {activeTab === 'history' && (
+          <HistoryScreen 
+            t={t} 
+            connection={props.connection} 
+            address={props.wallet?.address} 
+            onBack={() => setActiveTab('home')} // タブなのでホームに戻るように設定
+          />
+        )}
         {activeTab === 'settings' && <SettingsMenu t={t} onNavigate={onNavigate} onLogout={onLogout} />}
       </View>
       <View style={styles.bottomNav}>
          <NavButton icon={Wallet} label={t('home')} active={activeTab === 'home'} onPress={() => setActiveTab('home')} />
          <NavButton icon={RefreshCw} label={t('swap')} active={activeTab === 'swap'} onPress={() => setActiveTab('swap')} />
+         <NavButton icon={History} label={t('history')} active={activeTab === 'history'} onPress={() => setActiveTab('history')} />
          <NavButton icon={Settings} label={t('settings')} active={activeTab === 'settings'} onPress={() => setActiveTab('settings')} />
       </View>
     </View>
@@ -1319,7 +1339,7 @@ const Dashboard = ({ t, wallet, assets, totalValue, onNav, notify, onRefresh, on
 };
 
 // ★修正: Swapコンポーネント (FlatList + Search + 取得状況表示)
-const Swap = ({ t, wallet, tokenList, notify, connection, onRetryFetch }: any) => {
+  const Swap = ({ t, wallet, tokenList, notify, connection, onRetryFetch }: any) => {
   const [fromToken, setFromToken] = useState(tokenList[0] || {});
   const [toToken, setToToken] = useState(tokenList[1] || {});
   const [amount, setAmount] = useState('');

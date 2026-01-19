@@ -117,7 +117,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "データを削除します。バックアップは済んでいますか？",
     copied: "コピーしました",
     jito_protection: "Jito MEV保護 有効",
-    connected: "に接続完了"
+    connected: "に接続完了",
+    history: '履歴',
+    history_desc: '最新10件の取引を表示します',
+    view_on_solscan: 'Solscanで詳細を見る',
+    no_transactions: '取引履歴はありません',
   },
   en: {
     welcome_title: "Ramya Wallet",
@@ -237,7 +241,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "This will delete data. Have you backed up?",
     copied: "Copied",
     jito_protection: "Jito MEV Protection Active",
-    connected: "Connected"
+    connected: "Connected",
+    history: 'History',
+    history_desc: 'Showing last 10 transactions',
+    view_on_solscan: 'View on Solscan',
+    no_transactions: 'No transactions found',
   },
   // スペイン語
   es: {
@@ -358,7 +366,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "Esto eliminará los datos. ¿Ha hecho una copia de seguridad?",
     copied: "Copiado",
     jito_protection: "Protección Jito MEV Activa",
-    connected: "Conectado"
+    connected: "Conectado",
+    history: 'Historial',
+    history_desc: 'Mostrando las últimas 10 transacciones',
+    view_on_solscan: 'Ver en Solscan',
+    no_transactions: 'No se encontraron transacciones',
   },
   // ロシア語
   ru: {
@@ -479,7 +491,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "Это удалит данные. Вы сделали резервную копию?",
     copied: "Скопировано",
     jito_protection: "Jito MEV Защита",
-    connected: "Подключено"
+    connected: "Подключено",
+    history: 'История',
+    history_desc: 'Последние 10 транзакций',
+    view_on_solscan: 'Посмотреть на Solscan',
+    no_transactions: 'Транзакции не найдены',
   },
   // ドイツ語
   de: {
@@ -600,7 +616,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "Dies löscht Daten. Haben Sie ein Backup?",
     copied: "Kopiert",
     jito_protection: "Jito MEV Schutz",
-    connected: "Verbunden"
+    connected: "Verbunden",
+    history: 'Verlauf',
+    history_desc: 'Letzte 10 Transaktionen werden angezeigt',
+    view_on_solscan: 'Auf Solscan ansehen',
+    no_transactions: 'Keine Transaktionen gefunden',
   },
   zh: {
     welcome_title: "Ramya Wallet",
@@ -720,7 +740,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "这将删除数据。您备份了吗？",
     copied: "已复制",
     jito_protection: "Jito MEV 保护",
-    connected: "已连接"
+    connected: "已连接",
+    history: '历史记录',
+    history_desc: '显示最近の10条交易',
+    view_on_solscan: '在 Solscan 上查看',
+    no_transactions: '未找到交易记录',
   },
   ko: {
     welcome_title: "Ramya Wallet",
@@ -840,7 +864,11 @@ export const TRANSLATIONS: any = {
     logout_confirm_desc: "데이터가 삭제됩니다. 백업하셨나요?",
     copied: "복사됨",
     jito_protection: "Jito MEV 보호",
-    connected: "에 연결됨"
+    connected: "에 연결됨",
+    history: '히스토리',
+    history_desc: '최근 10개의 트랜잭션을 표시합니다',
+    view_on_solscan: 'Solscan에서 보기',
+    no_transactions: '거래 내역이 없습니다',
   }
 };
 
