@@ -128,7 +128,7 @@ const JUPITER_PRICE_API = 'https://api.jup.ag/price/v2';
 const STORAGE_KEY = 'my_solana_wallet_settings_v1'; // 設定用
 const STORAGE_KEY_CONTACTS = 'my_solana_contacts_v1'; 
 const STORAGE_KEY_LANG = 'my_solana_language_v1'; 
-const SECURE_WALLET_KEY = 'secure_wallet_data_v1';  // ★追加: 秘密鍵用
+const SECURE_WALLET_KEY = 'secure_wallet_data_v1';  // 秘密鍵用
 
 const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 const JITO_SOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn";
