@@ -41,3 +41,12 @@ export const shortenAddress = (addr: string) => {
   if (!addr) return '';
   return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 };
+
+// 指定ミリ秒待機する関数
+export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// 秘密鍵を文字列化する関数
+export const secretKeyToString = (secretKey: Uint8Array) => {
+  if (!secretKey) return "";
+  return JSON.stringify(Array.from(secretKey));
+};
