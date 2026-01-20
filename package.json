@@ -28,6 +28,7 @@
     "react-native-randombytes": "^3.6.2",
     "react-native-safe-area-context": "^3.4.1",
     "react-native-svg": "^15.15.1",
+    "react-native-webview": "^13.16.0",
     "readable-stream": "^4.7.0",
     "stream-browserify": "^3.0.0",
     "text-encoding-polyfill": "^0.6.7"

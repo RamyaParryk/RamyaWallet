@@ -172,8 +172,8 @@ interface Asset {
   name: string;
   amount: number;
   decimals: number;
-  price: number; 
-  value: number; 
+  price?: number;
+  value?: number;
   logoURI: string;
 }
 
@@ -416,24 +416,60 @@ export default function App() {
     );
   };
 
-  // トークンリストの取得 (Jupiter API)
-  const fetchTokens = useCallback(async () => {
-      try {
-        const res = await fetch(JUPITER_TOKEN_LIST_API);
-        if (!res.ok) { throw new Error(`HTTP status ${res.status}`); }
-        const data = await res.json();
-        if(Array.isArray(data)) {
-          setTokenList(data);
-          // マップ化して検索を高速化
-          const map = new Map();
-          data.forEach(t => map.set(t.address, t));
-          setTokenMap(map);
-          console.log(`Fetched ${data.length} tokens.`);
-        }
-      } catch (e: any) {
-        console.log("Token list fetch failed (dev environment?)");
+// トークンリストの取得 (Jupiter / GitHub)
+const fetchTokens = useCallback(async () => {
+  try {
+    console.log('[TOKEN] fetching token list...');
+
+    const res = await fetch(JUPITER_TOKEN_LIST_API, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'RamyaWallet/1.0',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP status ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Invalid token list format');
+    }
+
+    // token list
+    setTokenList(data);
+
+    // map 化（超重要）
+    const map = new Map<string, any>();
+    data.forEach(t => {
+      if (t?.address) {
+        map.set(t.address, t);
       }
-  }, []);
+    });
+    setTokenMap(map);
+
+    console.log(`[TOKEN] fetched ${data.length} tokens`);
+
+  } catch (e) {
+    console.log('[TOKEN] fetch failed, fallback to DEFAULT_TOKENS', e);
+
+    // fallback
+    setTokenList(DEFAULT_TOKENS);
+
+    const fallbackMap = new Map<string, any>();
+    DEFAULT_TOKENS.forEach(t => {
+      if (t?.address) {
+        fallbackMap.set(t.address, t);
+      }
+    });
+    setTokenMap(fallbackMap);
+  }
+}, []);
+
+
 
   useEffect(() => {
     fetchTokens();
@@ -491,32 +527,56 @@ export default function App() {
         }
       });
 
-      // 3. 価格取得 (Jupiter Price API)
-      if (mintsToFetchPrice.length > 0 && network === 'mainnet-beta') {
-        try {
-          const ids = mintsToFetchPrice.slice(0, 30).join(','); // 一度に取れる数に制限があるため簡易的に30件
-          const priceRes = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`);
-          const priceData = await priceRes.json();
-          
-          if (priceData.data) {
-            let total = 0;
-            tempAssets.forEach(asset => {
-              const priceInfo = priceData.data[asset.mint];
-              if (priceInfo) {
-                asset.price = parseFloat(priceInfo.price);
-                asset.value = asset.amount * asset.price;
-                total += asset.value;
-              }
-            });
-            setTotalValue(total);
-          }
-        } catch (e) {
-          console.log("Price fetch failed", e);
+// 3. 価格取得 (Jupiter Price API)
+if (mintsToFetchPrice.length > 0 && network === 'mainnet-beta') {
+  try {
+    // 一度に取得できる数に制限があるため最大30件
+    const ids = mintsToFetchPrice.slice(0, 30).join(',');
+
+const priceRes = await fetch(
+  `${JUPITER_PRICE_API}?ids=${ids}`,
+  {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'RamyaWallet/1.0',
+    },
+  }
+);
+
+    if (!priceRes.ok) {
+      throw new Error(`Price API error ${priceRes.status}`);
+    }
+
+    const priceData = await priceRes.json();
+
+    if (priceData?.data) {
+      let total = 0;
+
+      tempAssets.forEach(asset => {
+        const priceInfo = priceData.data[asset.mint];
+
+        if (priceInfo && priceInfo.price != null) {
+          asset.price = Number(priceInfo.price);
+          asset.value = asset.amount * asset.price;
+          total += asset.value;
+        } else {
+    asset.price = undefined;
+    asset.value = undefined; // or 0
         }
-      }
+      });
+
+      setTotalValue(total);
+    }
+  } catch (e) {
+    console.log("Price fetch failed", e);
+  }
+}
+
 
       // 価値順にソート
-      tempAssets.sort((a, b) => b.value - a.value);
+      tempAssets.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
       setAssets(tempAssets);
       
       // 旧balancesステートとの互換性維持
@@ -775,7 +835,7 @@ export default function App() {
 }
 
 // メイン画面（タブ管理 + 子画面への遷移管理）
-const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryFetchTokens, contacts, ...props }: any) => {
+const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryFetchTokens, contacts,wallet, ...props }: any) => {
   return (
     <View style={{flex:1}}>
       <View style={{flex:1}}>
@@ -784,6 +844,7 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
              t={t}
              onNav={setActiveTab} 
              onNavigate={onNavigate} 
+             wallet={wallet}
              {...props} 
           />
         )}
@@ -792,7 +853,7 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
           <HistoryScreen 
             t={t} 
             connection={props.connection} 
-            address={props.wallet?.address} 
+            address={wallet?.address} 
             onBack={() => setActiveTab('home')} // タブなのでホームに戻るように設定
           />
         )}

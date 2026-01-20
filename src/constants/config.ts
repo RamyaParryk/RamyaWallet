@@ -1,7 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
 
 // Jupiter API Endpoints
-export const JUPITER_TOKEN_LIST_API = 'https://token.jup.ag/strict'; 
+export const JUPITER_TOKEN_LIST_API = 'https://token.jup.ag/all'; 
 export const JUPITER_QUOTE_API = 'https://quote-api.jup.ag/v6/quote';
 export const JUPITER_SWAP_API = 'https://quote-api.jup.ag/v6/swap';
 export const JUPITER_PRICE_API = 'https://api.jup.ag/price/v2';
