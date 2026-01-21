@@ -91,6 +91,7 @@ import {
   JUPITER_QUOTE_API, 
   JUPITER_SWAP_API, 
   JUPITER_PRICE_API, 
+  JUPITER_API_KEY,
   TOKEN_PROGRAM_ID, 
   JITO_SOL_MINT, 
   SOL_MINT, 
@@ -267,6 +268,7 @@ export default function App() {
 
   // 戻るボタンのハードウェア制御
   useEffect(() => {
+    console.log("🛠️ API KEY CHECK:", JUPITER_API_KEY);
     const backAction = () => {
       const subScreens = [
         'settings_security', 'settings_network', 'settings_help', 'settings_about', 'settings_lang', 'pin_setup', 'import', 'address_book', 'stake',
@@ -292,6 +294,7 @@ export default function App() {
 
   // アプリ起動時のデータ読み込み (セキュリティ修正版)
   useEffect(() => {
+  //  Alert.alert("API Key Check", `Key is: ${JUPITER_API_KEY}`); // API Keyが読み込まれたか確認
     const loadWallet = async () => {
       await wait(2000); // スプラッシュ表示時間
       try {
@@ -534,13 +537,13 @@ if (mintsToFetchPrice.length > 0 && network === 'mainnet-beta') {
     const ids = mintsToFetchPrice.slice(0, 30).join(',');
 
 const priceRes = await fetch(
-  `${JUPITER_PRICE_API}?ids=${ids}`,
+  `${JUPITER_PRICE_API}?ids=${ids}&vsToken=USDC&showExtraInfo=true`,
   {
     method: 'GET',
     headers: {
       'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'User-Agent': 'RamyaWallet/1.0',
+      'User-Agent': 'RamyaWallet/1.0.5',
+      'x-api-key': JUPITER_API_KEY
     },
   }
 );
@@ -550,7 +553,7 @@ const priceRes = await fetch(
     }
 
     const priceData = await priceRes.json();
-
+    console.log('[PRICE]', priceData);
     if (priceData?.data) {
       let total = 0;
 

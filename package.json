@@ -1,6 +1,6 @@
 {
-  "name": "MySolanaWallet",
-  "version": "0.0.1",
+  "name": "ramyawallet",
+  "version": "1.0.5",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -50,6 +50,7 @@
     "eslint": "^8.19.0",
     "jest": "^29.2.1",
     "prettier": "2.8.8",
+    "react-native-dotenv": "^3.4.11",
     "react-test-renderer": "19.2.0",
     "typescript": "^5.8.3"
   },
