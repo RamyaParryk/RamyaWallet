@@ -92,6 +92,7 @@ import {
   JUPITER_SWAP_API, 
   JUPITER_PRICE_API, 
   JUPITER_API_KEY,
+  COINGECKO_PRICE_API,
   TOKEN_PROGRAM_ID, 
   JITO_SOL_MINT, 
   SOL_MINT, 
@@ -155,6 +156,11 @@ const STORAGE_KEY_LANG = 'my_solana_language_v1';
 const SECURE_WALLET_KEY = 'secure_wallet_data_v1';  // 秘密鍵用
 
 const rnBiometrics = new ReactNativeBiometrics();
+const COINGECKO_ID_MAP: Record<string, string> = {
+  So11111111111111111111111111111111111111112: 'solana',
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: 'usd-coin',
+  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: 'bonk',
+};
 
 
 // ==========================================
@@ -202,6 +208,143 @@ const DEFAULT_TOKENS = [
     logoURI: 'https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I' 
   },
 ];
+
+// ============================================
+// Price fetch (Jupiter → CoinGecko fallback)
+// ============================================
+
+const PRICE_CACHE_TTL = 30_000; // 30秒
+let lastPriceFetchAt = 0;
+
+type PriceResult = Record<
+  string,
+  {
+    price: number;
+    source: 'jupiter' | 'coingecko';
+  }
+>;
+
+const priceCache = new Map<string, { data: PriceResult; at: number }>();
+
+async function fetchPriceWithFallback(
+  ids: string
+): Promise<PriceResult | null> {
+  const now = Date.now();
+
+  // =========================
+  // 1. cache
+  // =========================
+  const cached = priceCache.get(ids);
+  if (cached && now - cached.at < PRICE_CACHE_TTL) {
+    console.log('[PRICE] cache hit');
+    return cached.data;
+  }
+
+  // =========================
+  // 2. throttle (1 req/sec)
+  // =========================
+  if (now - lastPriceFetchAt < 1100) {
+    console.log('[PRICE] throttled');
+    return cached?.data ?? null;
+  }
+  lastPriceFetchAt = now;
+
+  // =========================
+  // 3. Jupiter Price API
+  // =========================
+  try {
+    const url =
+      `${JUPITER_PRICE_API}?ids=${ids}&vsToken=USDC&showExtraInfo=true`;
+
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+
+      if (json?.data && Object.keys(json.data).length > 0) {
+        const result: PriceResult = {};
+
+        Object.entries(json.data).forEach(([mint, info]: any) => {
+          if (info?.price != null) {
+            result[mint] = {
+              price: Number(info.price),
+              source: 'jupiter',
+            };
+          }
+        });
+
+        if (Object.keys(result).length > 0) {
+          priceCache.set(ids, { data: result, at: now });
+          console.log('[PRICE] Jupiter OK');
+          return result;
+        }
+      }
+    }
+
+    console.warn('[PRICE] Jupiter empty / failed');
+  } catch (e) {
+    console.warn('[PRICE] Jupiter error', e);
+  }
+
+  // =========================
+  // 4. CoinGecko fallback
+  // =========================
+  try {
+    console.log('[PRICE][FALLBACK] CoinGecko price fetch start');
+
+    const cgIds = ids
+      .split(',')
+      .map(mint => COINGECKO_ID_MAP[mint])
+      .filter(Boolean)
+      .join(',');
+
+    if (!cgIds) {
+      console.warn('[PRICE][FALLBACK] no supported tokens');
+      return null;
+    }
+
+    const res = await fetch(
+      `${COINGECKO_PRICE_API}?ids=${cgIds}&vs_currencies=usd`
+    );
+
+    if (!res.ok) {
+      throw new Error(`CG ${res.status}`);
+    }
+
+    const json = await res.json();
+
+    const result: PriceResult = {};
+
+    Object.entries(COINGECKO_ID_MAP).forEach(([mint, cgId]) => {
+      if (json[cgId]?.usd != null) {
+        result[mint] = {
+          price: json[cgId].usd,
+          source: 'coingecko',
+        };
+      }
+    });
+
+    if (Object.keys(result).length > 0) {
+      priceCache.set(ids, { data: result, at: now });
+      console.log('[PRICE][FALLBACK] CoinGecko OK');
+      return result;
+    }
+
+  } catch (e) {
+    console.warn('[PRICE] CoinGecko error', e);
+  }
+
+  console.warn('[PRICE] no price data');
+  return null;
+}
+
+
+
 
 // ==========================================
 // 共通UIコンポーネント
@@ -531,52 +674,31 @@ const fetchTokens = useCallback(async () => {
       });
 
 // 3. 価格取得 (Jupiter Price API)
-if (mintsToFetchPrice.length > 0 && network === 'mainnet-beta') {
-  try {
-    // 一度に取得できる数に制限があるため最大30件
-    const ids = mintsToFetchPrice.slice(0, 30).join(',');
+// ids を作る（これは今までと同じ）
+const ids = mintsToFetchPrice.slice(0, 30).join(',');
 
-const priceRes = await fetch(
-  `${JUPITER_PRICE_API}?ids=${ids}&vsToken=USDC&showExtraInfo=true`,
-  {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'RamyaWallet/1.0.5',
-      'x-api-key': JUPITER_API_KEY
-    },
-  }
-);
+// ★ここがすべて
+const priceMap = await fetchPriceWithFallback(ids);
+console.log('[PRICE][FINAL]', priceMap);
 
-    if (!priceRes.ok) {
-      throw new Error(`Price API error ${priceRes.status}`);
-    }
-
-    const priceData = await priceRes.json();
-    console.log('[PRICE]', priceData);
-    if (priceData?.data) {
-      let total = 0;
-
-      tempAssets.forEach(asset => {
-        const priceInfo = priceData.data[asset.mint];
-
-        if (priceInfo && priceInfo.price != null) {
-          asset.price = Number(priceInfo.price);
-          asset.value = asset.amount * asset.price;
-          total += asset.value;
-        } else {
-    asset.price = undefined;
-    asset.value = undefined; // or 0
-        }
-      });
-
-      setTotalValue(total);
-    }
-  } catch (e) {
-    console.log("Price fetch failed", e);
-  }
+// 取れなかったら何もしない
+if (!priceMap) {
+  console.log('[PRICE] priceMap is null, skip render');
+  return;
 }
 
+let total = 0;
+
+tempAssets.forEach(asset => {
+  const p = priceMap[asset.mint];
+  if (!p) return;
+
+  asset.price = p.price;
+  asset.value = asset.amount * asset.price;
+  total += asset.value;
+});
+
+setTotalValue(total);
 
       // 価値順にソート
       tempAssets.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
