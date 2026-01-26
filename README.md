@@ -3,6 +3,8 @@
 **🇺🇸 English Version** | **[🇯🇵 日本語版](./README_JP.md)**
 
 ---
+- The app is currently under development and not yet complete.
+---
 
 **Secure, Fast, Simple Solana Wallet built with React Native.**
 

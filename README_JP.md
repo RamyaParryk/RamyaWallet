@@ -3,6 +3,8 @@
 **[🇺🇸 English Version](./README.md)** | **🇯🇵 日本語版**
 
 ---
+※現在アプリは制作中で未完成です
+---
 
 **React Native製の、安全・高速・シンプルな Solana ウォレット**
 
