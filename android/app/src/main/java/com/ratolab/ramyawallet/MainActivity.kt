@@ -1,4 +1,4 @@
-package com.ramyawallet
+package com.ratolab.ramyawallet
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

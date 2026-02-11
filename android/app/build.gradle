@@ -77,7 +77,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.ramyawallet"
+    namespace "com.ratolab.ramyawallet"
     defaultConfig {
         applicationId "com.ratolab.ramyawallet"
         minSdkVersion rootProject.ext.minSdkVersion
