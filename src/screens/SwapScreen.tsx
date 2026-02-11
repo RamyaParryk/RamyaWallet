@@ -321,7 +321,7 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
           <View style={localStyles.infoRow}>
             <Text style={localStyles.infoLabel}>{t('fee') || 'Fee'}</Text>
             <Text style={[localStyles.infoValue, { color: '#a855f7' }]}>
-              0.4% ({t('included') || 'Included'})
+              0.1% ({t('included') || 'Included'})
             </Text>
           </View>
           <View style={[localStyles.infoRow, { justifyContent: 'flex-start', marginTop: 4 }]}>

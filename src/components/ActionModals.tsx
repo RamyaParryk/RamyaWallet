@@ -1,5 +1,3 @@
-// src/components/ActionModals.tsx
-
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import LottieView from 'lottie-react-native'; // ★ アニメーション用
@@ -30,30 +28,33 @@ export const ConfirmModal = ({ visible, title, message, onCancel, onConfirm, con
   );
 };
 
-// ■ 成功用アニメーション（Backpack風チェックマーク）
+// ■ 成功用アニメーション（ボタンなし・自動クローズ）
 export const SuccessModal = ({ visible, message, onDone }: any) => {
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={[styles.card, { alignItems: 'center', paddingVertical: 40 }]}>
-          {/* Lottieアニメーション */}
-          <View style={{ width: 120, height: 120, marginBottom: 20 }}>
+        <View style={[styles.card, { alignItems: 'center', paddingVertical: 30 }]}>
+          
+          <View style={{ width: 240, height: 240, marginBottom: 10 }}>
             {visible && (
               <LottieView
-                source={require('../../assets/success.json')} // ★ assetsに置いたファイルを指定
+                source={require('../../assets/success.json')}
                 autoPlay
                 loop={false}
-                style={{ width: '100%', height: '100%' }}
-                onAnimationFinish={onDone} // アニメが終わったら閉じる場合はこれを使う
+                speed={1.0}
+                style={{ 
+                  width: '100%', 
+                  height: '100%',
+                  backgroundColor: 'transparent'
+                }}
+                onAnimationFinish={onDone}
               />
             )}
           </View>
-          <Text style={[styles.title, { color: '#22c55e', fontSize: 22 }]}>Success!</Text>
-          <Text style={[styles.message, { textAlign: 'center', marginTop: 10 }]}>{message}</Text>
+
+          <Text style={[styles.title, { color: '#22c55e', fontSize: 24 }]}>Success!</Text>
+          <Text style={[styles.message, { textAlign: 'center', marginTop: 10, fontSize: 18 }]}>{message}</Text>
           
-          <TouchableOpacity style={[styles.confirmBtn, { marginTop: 20, width: '80%' }]} onPress={onDone}>
-            <Text style={styles.confirmText}>Close</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -93,22 +94,34 @@ const styles = StyleSheet.create({
   btnRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 12, // ボタン同士の間隔
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    padding: 14,
     borderRadius: 12,
     backgroundColor: '#333',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#444',
   },
   confirmBtn: {
     flex: 1,
-    paddingVertical: 14,
+    padding: 14,
     borderRadius: 12,
-    backgroundColor: '#a855f7', // メインカラー
+    backgroundColor: '#a855f7',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelText: { color: 'white', fontWeight: 'bold' },
-  confirmText: { color: 'white', fontWeight: 'bold' },
+  cancelText: {
+    color: '#ccc',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  confirmText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });

@@ -36,40 +36,6 @@ export const fetchTokenList = async () => {
 
   return tokens;
 
-  /** 70程度のトークンなので、通信せずに内包json仕様 **/
-
-  // // --- Plan A: Jupiter公式API ---
-  // try {
-  //   const res = await fetch(JUPITER_TOKEN_LIST_API, {
-  //     method: 'GET',
-  //     headers: { 'User-Agent': 'Mozilla/5.0' }
-  //   });
-  //   if (res.ok) {
-  //     const tokens = await res.json();
-  //     if (Array.isArray(tokens) && tokens.length > 500) {
-  //       console.log(`[TOKEN] ✅ Jupiter成功: ${tokens.length} tokens`);
-  //       return tokens;
-  //     }
-  //   }
-  // } catch (e) {
-  //   console.warn("[TOKEN] ⚠️ Jupiter失敗");
-  // }
-
-  // // --- Plan B: 自分のリスト ---
-  // console.log('[TOKEN] 📂 アプリ内包リストを読み込みます...');
-  // try {
-  //   const res = await fetch(TOKEN_LIST_URL);
-  //   if (res.ok) {
-  //     const tokens = await res.json();
-  //     console.log(`[TOKEN] ✅ バックアップ成功: ${tokens.length} tokens`);
-  //     return tokens;
-  //   }
-  // } catch (e) {
-  //   console.error("[TOKEN] 🚨 全リスト取得失敗");
-  // }
-
-  // return [];
-
 };
 
 // ---------------------------------------------------------
