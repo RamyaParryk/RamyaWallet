@@ -33,6 +33,6 @@ export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9
 export const JITO_SOL_MINT = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn";
 export const SOL_MINT = "So11111111111111111111111111111111111111112";
 
-export const MY_PLATFORM_FEE_BPS = 10; 
+export const MY_PLATFORM_FEE_BPS = 0; 
 export const YOUTUBE_URL = "https://www.youtube.com/@ramyaparryk";
 export const GITHUB_URL = "https://github.com/RamyaParryk/RamyaWallet";

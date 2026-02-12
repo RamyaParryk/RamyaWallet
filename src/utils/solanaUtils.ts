@@ -24,7 +24,7 @@ export const fetchTransactionHistory = async (connection: Connection, address: s
           date,
           status: sig.confirmationStatus,
           error: !!sig.err,
-          // 簡易的な判別（本来はもっと複雑ですが、まずはここから）
+          // 簡易的な判別
           memo: sig.memo || ""
         };
       })
@@ -34,6 +34,30 @@ export const fetchTransactionHistory = async (connection: Connection, address: s
     console.error("History fetch failed:", e);
     return [];
   }
+};
+
+export const fetchTokenBalances = async (connection: Connection, walletAddress: string) => {
+  const pubkey = new PublicKey(walletAddress);
+  
+  // 所有しているすべてのトークンアカウントを取得
+  const tokenAccounts = await connection.getParsedTokenAccountsByOwner(pubkey, {
+    programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+  });
+
+  // 使いやすいように { mint: amount } の形式に変換
+  const balances: { [mint: string]: number } = {};
+  
+  tokenAccounts.value.forEach((account) => {
+    const parsedInfo = account.account.data.parsed.info;
+    const mint = parsedInfo.mint;
+    const amount = parsedInfo.tokenAmount.uiAmount;
+    
+    if (amount > 0) {
+      balances[mint] = amount;
+    }
+  });
+
+  return balances;
 };
 
 // アドレスを短縮表示する関数

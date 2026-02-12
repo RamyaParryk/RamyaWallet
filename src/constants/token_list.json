@@ -1,21 +1,5 @@
 [
   {
-    "chainId": 101,
-    "address": "Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W",
-    "symbol": "RMYP",
-    "name": "RamyaParryk",
-    "decimals": 6,
-    "logoURI": "https://images.pump.fun/coin-image/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W?variant=86x86"
-  },
-  {
-    "chainId": 101,
-    "address": "HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765",
-    "symbol": "KCAR",
-    "name": "K-Car",
-    "decimals": 6,
-    "logoURI": "https://images.pump.fun/coin-image/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765?variant=86x86"
-  },
-  {
     "address": "So11111111111111111111111111111111111111112",
     "symbol": "SOL",
     "name": "Solana",
@@ -44,11 +28,11 @@
     "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png"
   },
   {
-    "address": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-    "symbol": "WIF",
-    "name": "dogwifhat",
-    "decimals": 6,
-    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm/logo.png"
+    "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+    "symbol": "JitoSOL",
+    "name": "Jito Staked SOL",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn/logo.png"
   },
   {
     "address": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
@@ -58,11 +42,11 @@
     "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png"
   },
   {
-    "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
-    "symbol": "JitoSOL",
-    "name": "Jito Staked SOL",
-    "decimals": 9,
-    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn/logo.png"
+    "address": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+    "symbol": "WIF",
+    "name": "dogwifhat",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm/logo.png"
   },
   {
     "address": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",

@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, Image, StyleSheet } from 'react-native';
 import {
-  RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp
+  RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, ExternalLink
 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { styles } from '../styles/globalStyles';
 import { shortenAddress } from '../utils/solanaUtils';
-// ★追加: TokenIconをインポート
 import { TokenIcon } from '../components/TokenIcon';
 
 // --- ローカル用サブコンポーネント ---
@@ -18,29 +17,23 @@ const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) =>
   </TouchableOpacity>
 );
 
-// ★ 修正: TokenIcon を使用するように変更
 const AssetItem = ({ symbol, name, amount, price, logoURI, status }: any) => {
-  // 1. スキャム（suspicious）は完全に隠す
   if (status === 'suspicious') return null;
-
-  // 2. 未確認（unknown）は薄く表示＆バッジ付け
   const isUnknown = status === 'unknown';
 
   return (
     <View style={[styles.assetRow, isUnknown && { opacity: 0.6 }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        
-        {/* ★ ここで TokenIcon を使用！ */}
         <TokenIcon uri={logoURI} symbol={symbol} size={40} />
-
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={styles.assetSym}>{symbol}</Text>
-            {/* UNKNOWN バッジの表示 */}
-            {isUnknown && (
+            {isUnknown ? (
               <View style={{backgroundColor: '#444', paddingHorizontal: 4, borderRadius: 4}}>
                 <Text style={{fontSize: 10, color: '#aaa', fontWeight: 'bold'}}>UNKNOWN</Text>
               </View>
+            ) : (
+              <BadgeCheck size={16} color="#3b82f6" fill="#1e1e1e" />
             )}
           </View>
           <Text style={styles.assetAmt}>{amount.toLocaleString()} {symbol}</Text>
@@ -50,6 +43,57 @@ const AssetItem = ({ symbol, name, amount, price, logoURI, status }: any) => {
         <Text style={styles.assetVal}>${(amount * price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
         <Text style={{ color: '#666', fontSize: 14 }}>@ ${price.toLocaleString()}</Text>
       </View>
+    </View>
+  );
+};
+
+// ★ 修正: t (翻訳関数) を props として受け取るように変更
+const PromoBanners = ({ t }: any) => {
+  const promos = [
+    {
+      id: 'rmyp',
+      symbol: 'RMYP',
+      name: 'RamyaParryk',
+      color: '#a855f7',
+      logo: 'https://images.pump.fun/coin-image/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W?variant=86x86',
+      url: 'https://pump.fun/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W' 
+    },
+    {
+      id: 'kcar',
+      symbol: 'KCAR',
+      name: 'K-Car',
+      color: '#ef4444',
+      logo: 'https://images.pump.fun/coin-image/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765?variant=86x86',
+      url: 'https://pump.fun/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765'
+    }
+  ];
+
+  return (
+    <View style={{ marginTop: 20, marginBottom: 10 }}>
+      {/* ★ 修正: 翻訳キーを使用 */}
+      <Text style={[styles.sectionTitle, { marginBottom: 10, marginLeft: 4, fontSize: 18 }]}>
+        {t('official_meme_token')}
+      </Text>
+      
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 4 }}>
+        {promos.map((p) => (
+          <TouchableOpacity 
+            key={p.id} 
+            style={[localStyles.promoCard, { borderColor: p.color }]}
+            onPress={() => Linking.openURL(p.url)}
+          >
+            <Image source={{ uri: p.logo }} style={localStyles.promoLogo} />
+            <View>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                <Text style={[localStyles.promoTitle, { color: p.color }]}>{p.symbol}</Text>
+                <BadgeCheck size={14} color={p.color} fill="#1e1e1e" />
+              </View>
+              <Text style={localStyles.promoDesc}>{p.name}</Text>
+            </View>
+            <ExternalLink size={16} color="#666" style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 };
@@ -87,6 +131,9 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
         </View>
       </View>
 
+      {/* ★ 修正: t を渡す */}
+      <PromoBanners t={t} />
+
       <View style={styles.assetsCard}>
         <View style={styles.assetsHeader}>
           <Text style={styles.sectionTitle}>{t('assets')}</Text>
@@ -112,3 +159,30 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
     </ScrollView>
   );
 };
+
+const localStyles = StyleSheet.create({
+  promoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    width: 200, 
+    gap: 12,
+  },
+  promoLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#333',
+  },
+  promoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  promoDesc: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+});

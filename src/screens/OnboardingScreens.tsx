@@ -54,7 +54,6 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
     const success = await onImport(cleanMnemonic);
     if (!success) setLoading(false);
   };
-// ... (以下変更なし)
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>

@@ -31,7 +31,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "スワップする",
     route: "ルート",
     fee: "手数料",
-    included: "込み",
+    included: "無料！",
     address_copied: "アドレスをコピーしました",
     solana_address: "Solana Address",
     copy: "コピー",
@@ -80,7 +80,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "Solanaネットワークの状況によりますが、おおよそ年利7%〜8%程度です。JitoSOLはMEV（最大抽出可能価値）報酬も含むため、通常のステーキングより高い報酬が期待できます。",
     faq_fee: "手数料はかかりますか？",
     apy_est: "APY:推定 7.5%",
-    faq_fee_desc: "スワップ（交換）を行う際に、少額のネットワーク手数料（Solanaへの支払い）と、アプリ維持のためのプラットフォーム手数料（0.4%）が発生します。送金手数料はネットワーク状況により変動します。",
+    faq_fee_desc: "スワップ（交換）を行う際に発生するのは、Solanaネットワークへ支払う少額のガス代のみです。※ RamyaWalletのプラットフォーム手数料は（0%）です。",
     faq_device: "機種変更時の注意点は？",
     faq_device_desc: "このアプリは非管理型（ノンカストディアル）ウォレットです。サーバーにあなたの情報を保存しません。機種変更前には必ず「設定 > セキュリティ」からシークレットリカバリーフレーズをメモし、新しい端末でインポートしてください。",
     faq_bank: "銀行とは何が違うのですか？",
@@ -140,6 +140,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "ステーキングの確認",
     confirm_stake_msg: "SOLを預けて報酬を受け取りますか？\n（資金はロックされません）",
 
+    faq_trouble_swap: "スワップがうまくいかない時は？",
+    faq_trouble_swap_desc: "混雑により処理が追いついていない可能性があります。数分待ってから再試行してください。また、手数料用のSOL（約0.01 SOL）が残っているか確認してください。",
+    faq_trouble_price: "価格が表示されない場合",
+    faq_trouble_price_desc: "データの読み込み制限にかかっている可能性があります。資産は安全ですので、しばらく時間を置いてからアプリを再起動してみてください。",
+    faq_trouble_balance: "残高が更新されない時は？",
+    faq_trouble_balance_desc: "ネットワークが混雑していると、反映まで1〜2分かかることがあります。しばらく待ってから、アプリを開き直してみてください。",
+
+    verified_tokens_desc: "現在、厳選された44種類の優良トークンへのみスワップ可能です。",
+    official_meme_token: "⭐ 公式ミームトークン",
   },
   en: {
     welcome_title: "Ramya Wallet",
@@ -173,7 +182,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "Swap",
     route: "Route",
     fee: "Fee",
-    included: "included",
+    included: "Free!",
     address_copied: "Address copied",
     solana_address: "Solana Address",
     copy: "Copy",
@@ -222,7 +231,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "It depends on the Solana network, but typically around 7-8% annually. JitoSOL includes MEV rewards, so higher returns can be expected compared to normal staking.",
     faq_fee: "Any fees?",
     apy_est: "Est. APY: ~7.5%",
-    faq_fee_desc: "A small network fee (paid to Solana) and a platform fee (0.4%) apply when swapping. Network fees vary based on congestion.",
+    faq_fee_desc: "When swapping, only a small network fee (gas) paid to the Solana network occurs. * RamyaWallet platform fee is 0%.",
     faq_device: "Changing device?",
     faq_device_desc: "This is a non-custodial wallet. We do not store your data on servers. Before changing devices, ensure you backup your Secret Recovery Phrase from 'Settings > Security' and import it on the new device.",
     faq_bank: "Difference from bank?",
@@ -282,6 +291,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "Confirm Staking",
     confirm_stake_msg: "Stake your SOL to earn rewards?",
 
+    faq_trouble_swap: "Swap not working?",
+    faq_trouble_swap_desc: "The network might be congested. Please wait a few minutes and try again. Also, check if you have enough SOL (approx 0.01 SOL) for fees.",
+    faq_trouble_price: "Price not showing?",
+    faq_trouble_price_desc: "Data limits may have been reached. Your assets are safe. Please wait a while and restart the app.",
+    faq_trouble_balance: "Balance not updating?",
+    faq_trouble_balance_desc: "Network congestion can cause delays of 1-2 minutes. Please wait a moment and try reopening the app.",
+
+    verified_tokens_desc: "Currently, you can only swap to 44 selected verified tokens.",
+    official_meme_token: "⭐ Official Meme Tokens",
   },
   // スペイン語
   es: {
@@ -316,7 +334,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "Intercambiar",
     route: "Ruta",
     fee: "Comisión",
-    included: "incluido",
+    included: "¡Gratis!",
     address_copied: "Dirección copiada",
     solana_address: "Dirección Solana",
     copy: "Copiar",
@@ -365,7 +383,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "Depende de la red Solana, pero típicamente es alrededor del 7-8% anual. JitoSOL incluye recompensas MEV, por lo que se esperan mayores retornos.",
     faq_fee: "¿Hay comisiones?",
     apy_est: "APY Est.: ~7.5%",
-    faq_fee_desc: "Se aplica una pequeña tarifa de red (pagada a Solana) y una tarifa de plataforma del 0.4% en los intercambios.",
+    faq_fee_desc: "Al realizar un intercambio, solo se cobra una pequeña tarifa de red (gas) de Solana. * La comisión de la plataforma RamyaWallet es del 0%.",
     faq_device: "¿Cambiar de dispositivo?",
     faq_device_desc: "Esta es una billetera sin custodia. No guardamos sus datos. Antes de cambiar de dispositivo, asegúrese de hacer una copia de seguridad de su frase.",
     faq_bank: "¿Diferencia con un banco?",
@@ -425,6 +443,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "Confirmar Staking",
     confirm_stake_msg: "¿Apostar su SOL para ganar recompensas?",
 
+    faq_trouble_swap: "¿Problemas con el intercambio?",
+    faq_trouble_swap_desc: "La red puede estar congestionada. Espere unos minutos e intente de nuevo. Verifique tener suficiente SOL (aprox 0.01) para comisiones.",
+    faq_trouble_price: "¿No aparece el precio?",
+    faq_trouble_price_desc: "Puede ser el límite de datos. Sus activos están seguros. Espere un momento y reinicie la app.",
+    faq_trouble_balance: "¿Saldo no actualizado?",
+    faq_trouble_balance_desc: "La congestión puede causar retrasos de 1-2 min. Espere un momento y vuelva a abrir la app.",
+    
+    verified_tokens_desc: "Actualmente, solo se puede intercambiar a 44 tokens verificados seleccionados.",
+    official_meme_token: "⭐ Tokens Meme Oficiales",
   },
   // ロシア語
   ru: {
@@ -459,7 +486,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "Обменять",
     route: "Маршрут",
     fee: "Комиссия",
-    included: "включена",
+    included: "Бесплатно!",
     address_copied: "Адрес скопирован",
     solana_address: "Адрес Solana",
     copy: "Копировать",
@@ -508,7 +535,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "Зависит от сети Solana, обычно около 7-8% годовых. JitoSOL включает MEV-вознаграждения, поэтому доходность выше обычного стейкинга.",
     faq_fee: "Есть ли комиссии?",
     apy_est: "Ожид. APY: ~7.5%",
-    faq_fee_desc: "Взимается небольшая комиссия сети (платится Solana) и комиссия платформы 0.4% при обмене.",
+    faq_fee_desc: "При обмене взимается только небольшая сетевая комиссия (газ) сети Solana. * Комиссия платформы RamyaWallet — 0%.",
     faq_device: "Смена устройства?",
     faq_device_desc: "Это некастодиальный кошелек. Мы не храним ваши данные. Перед сменой устройства обязательно сделайте резервную копию фразы в «Настройки > Безопасность».",
     faq_bank: "Отличие от банка?",
@@ -568,6 +595,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "Подтверждение стейкинга",
     confirm_stake_msg: "Застейкать SOL для получения наград?",
 
+    faq_trouble_swap: "Обмен не работает?",
+    faq_trouble_swap_desc: "Сеть может быть перегружена. Подождите пару минут. Проверьте, хватает ли SOL (ок. 0.01) для комиссии.",
+    faq_trouble_price: "Не отображается цена?",
+    faq_trouble_price_desc: "Возможно, превышен лимит запросов. Активы в безопасности. Подождите и перезапустите приложение.",
+    faq_trouble_balance: "Баланс не обновляется?",
+    faq_trouble_balance_desc: "Из-за нагрузки возможны задержки 1-2 мин. Подождите и перезапустите приложение.",
+
+    verified_tokens_desc: "В настоящее время обмен возможен только на 44 проверенных токена.",
+    official_meme_token: "⭐ Официальные Мем-Токены",
   },
   // ドイツ語
   de: {
@@ -602,7 +638,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "Tauschen",
     route: "Route",
     fee: "Gebühr",
-    included: "inklusive",
+    included: "Kostenlos!",
     address_copied: "Adresse kopiert",
     solana_address: "Solana Adresse",
     copy: "Kopieren",
@@ -651,7 +687,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "Hängt vom Solana-Netzwerk ab, typischerweise etwa 7-8% jährlich. JitoSOL beinhaltet MEV-Belohnungen, daher sind höhere Renditen zu erwarten.",
     faq_fee: "Gebühren?",
     apy_est: "Gesch. APY: ~7.5%",
-    faq_fee_desc: "Eine kleine Netzwerkgebühr (an Solana) und eine Plattformgebühr (0,4%) fallen beim Tausch an.",
+    faq_fee_desc: "Beim Tauschen fallen nur geringe Netzwerkgebühren (Gas) an, die an das Solana-Netzwerk gezahlt werden. * Die RamyaWallet-Plattformgebühr beträgt 0%.",
     faq_device: "Gerät wechseln?",
     faq_device_desc: "Dies ist eine Non-Custodial-Wallet. Wir speichern keine Daten auf Servern. Sichern Sie Ihre Phrase unter 'Einstellungen > Sicherheit', bevor Sie das Gerät wechseln.",
     faq_bank: "Unterschied zur Bank?",
@@ -711,6 +747,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "Staking bestätigen",
     confirm_stake_msg: "SOL staken, um Belohnungen zu erhalten?",
 
+    faq_trouble_swap: "Swap funktioniert nicht?",
+    faq_trouble_swap_desc: "Netzwerk könnte überlastet sein. Warten Sie einige Minuten. Prüfen Sie, ob genug SOL (ca. 0.01) für Gebühren vorhanden ist.",
+    faq_trouble_price: "Preis wird nicht angezeigt?",
+    faq_trouble_price_desc: "Datenlimit erreicht? Ihre Assets sind sicher. Warten Sie kurz und starten Sie die App neu.",
+    faq_trouble_balance: "Guthaben aktualisiert nicht?",
+    faq_trouble_balance_desc: "Netzwerkstau kann 1-2 Min Verzögerung verursachen. Warten Sie kurz und öffnen Sie die App erneut.",
+
+    verified_tokens_desc: "Derzeit ist ein Tausch nur in 44 ausgewählte verifizierte Token möglich.",
+    official_meme_token: "⭐ Offizielle Meme-Token",
   },
   zh: {
     welcome_title: "Ramya Wallet",
@@ -744,7 +789,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "兑换",
     route: "路径",
     fee: "费用",
-    included: "包含",
+    included: "免费！",
     address_copied: "地址已复制",
     solana_address: "Solana地址",
     copy: "复制",
@@ -793,7 +838,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "取决于Solana网络，通常约为年化7-8%。JitoSOL包含MEV奖励，因此预期回报高于普通质押。",
     faq_fee: "有费用吗？",
     apy_est: "预估 APY: ~7.5%",
-    faq_fee_desc: "兑换时会收取少量的网络费用（支付给Solana）和0.4%的平台费用。",
+    faq_fee_desc: "进行兑换时，仅需支付 Solana 网络收取的少量 Gas 费。* RamyaWallet 平台手续费为 0%。",
     faq_device: "更换设备？",
     faq_device_desc: "这是一个非托管钱包。我们不在服务器上存储您的数据。更换设备前，请务必从“设置 > 安全”备份您的恢复短语并在新设备上导入。",
     faq_bank: "与银行的区别？",
@@ -853,6 +898,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "确认质押",
     confirm_stake_msg: "质押 SOL 以获得奖励？",
 
+    faq_trouble_swap: "兑换无法进行？",
+    faq_trouble_swap_desc: "网络可能拥堵。请稍等几分钟重试。同时请确认留有足够的SOL（约0.01）作为手续费。",
+    faq_trouble_price: "价格未显示？",
+    faq_trouble_price_desc: "可能达到了数据限制。您的资产是安全的。请稍候重启应用。",
+    faq_trouble_balance: "余额未更新？",
+    faq_trouble_balance_desc: "网络拥堵可能导致1-2分钟延迟。请稍候重新打开应用。",
+
+    verified_tokens_desc: "目前仅支持兑换为 44 种经过验证的精选代币。",
+    official_meme_token: "⭐ 官方Meme代币",
   },
   ko: {
     welcome_title: "Ramya Wallet",
@@ -886,7 +940,7 @@ export const TRANSLATIONS: any = {
     swap_btn: "스왑",
     route: "경로",
     fee: "수수료",
-    included: "포함",
+    included: "무료!",
     address_copied: "주소가 복사되었습니다",
     solana_address: "Solana 주소",
     copy: "복사",
@@ -935,7 +989,7 @@ export const TRANSLATIONS: any = {
     faq_apy_desc: "Solana 네트워크 상황에 따라 다르지만, 보통 연 7~8% 정도입니다. JitoSOL은 MEV 보상을 포함하므로 일반 스테이킹보다 높은 수익을 기대할 수 있습니다.",
     faq_fee: "수수료가 있나요?",
     apy_est: "예상 APY: ~7.5%",
-    faq_fee_desc: "스왑 시 소액의 네트워크 수수료(Solana에 지불)와 0.4%의 플랫폼 수수료가 적용됩니다.",
+    faq_fee_desc: "스왑(교환) 시 Solana 네트워크에 지불하는 소액의 가스비만 발생합니다. * RamyaWallet 플랫폼 수수료는 **0%**입니다.",
     faq_device: "기기 변경 시 주의점?",
     faq_device_desc: "이것은 비수탁형 지갑입니다. 서버에 데이터를 저장하지 않습니다. 기기를 변경하기 전에 반드시 '설정 > 보안'에서 복구 문구를 백업하고 새 기기에서 가져오기 하세요.",
     faq_bank: "은행과의 차이점?",
@@ -995,6 +1049,15 @@ export const TRANSLATIONS: any = {
     confirm_stake_title: "스테이킹 확인",
     confirm_stake_msg: "보상을 받기 위해 SOL을 스테이킹하시겠습니까?",
 
+    faq_trouble_swap: "스왑이 안 되나요?",
+    faq_trouble_swap_desc: "네트워크가 혼잡할 수 있습니다. 몇 분 후 다시 시도해 주세요. 수수료용 SOL(약 0.01)이 남았는지 확인하세요.",
+    faq_trouble_price: "가격이 안 보이나요?",
+    faq_trouble_price_desc: "데이터 제한일 수 있습니다. 자산은 안전합니다. 잠시 후 앱을 재시작해 주세요.",
+    faq_trouble_balance: "잔액 갱신이 안 되나요?",
+    faq_trouble_balance_desc: "네트워크 혼잡으로 1~2분 지연될 수 있습니다. 잠시 후 앱을 다시 열어보세요.",
+
+    verified_tokens_desc: "현재 엄선된 44개의 인증된 토큰으로만 스왑 가능합니다.",
+    official_meme_token: "⭐ 공식 밈 토큰",
   }
 };
 

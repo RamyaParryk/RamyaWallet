@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, Alert } from 'react-native';
-// ★ ExternalLink を消して、X を追加しました
-import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X } from 'lucide-react-native';
+// ★ AlertCircle を追加しました
+import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { YOUTUBE_URL, GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
+import packageJson from '../../package.json';
 
 // ローカル用 SettingItem
 const SettingItem = ({ icon: Icon, title, desc, onPress, color="#222" }: any) => (
   <TouchableOpacity style={styles.settingItem} onPress={onPress}>
      <View style={[styles.settingIcon, {backgroundColor: color}]}>
-       <Icon size={20} color={color === '#222' ? '#fff' : '#ef4444'}/>
+       {/* アイコン色は背景が暗い色なら白にするように修正 */}
+       <Icon size={20} color="#fff"/>
      </View>
      <View style={{flex:1}}>
        <Text style={styles.settingText}>{title}</Text>
@@ -23,14 +25,12 @@ const SettingItem = ({ icon: Icon, title, desc, onPress, color="#222" }: any) =>
   </TouchableOpacity>
 );
 
-// --- セキュリティ設定画面 ---
+// --- セキュリティ設定画面 (変更なし) ---
 export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack, network }: any) => {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const rnBiometrics = new ReactNativeBiometrics();
-
   if (!wallet) return <View style={styles.content} />;
-
   const handleBiometrics = async (enabled: boolean) => {
     if (enabled) {
       if (!hasPin) {
@@ -50,7 +50,6 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
       setBiometrics(false);
     }
   };
-
   return (
     <ScrollView style={styles.content}>
       <HeaderRow title={t('security')} onBack={onBack} />
@@ -79,11 +78,10 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   );
 };
 
-// --- ネットワーク設定画面 ---
+// --- ネットワーク設定画面 (変更なし) ---
 export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRpc, setRpc, onBack }: any) => {
   const networks = [{ id: 'mainnet-beta', name: 'Mainnet Beta', desc: 'Real Money' }, { id: 'devnet', name: 'Devnet', desc: 'Test Env' }];
   const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius' }, { id: 'QuickNode', name: 'QuickNode' }];
-
   return (
     <View style={styles.content}>
       <HeaderRow title={t('network')} onBack={onBack} />
@@ -111,7 +109,7 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
   );
 };
 
-// --- 言語設定画面 ---
+// --- 言語設定画面 (変更なし) ---
 export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   const langs = [
     { code: 'ja', label: '日本語' }, { code: 'en', label: 'English' }, { code: 'es', label: 'Español' },
@@ -132,17 +130,24 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   );
 };
 
-// --- ヘルプ画面 ---
+// --- ヘルプ画面 (トラブルシューティング3項目を反映) ---
 export const HelpScreen = ({ t, onBack }: any) => {
   const items = [
-    {icon:RefreshCw, color:'#222', t:'faq_restore'}, {icon:TrendingUp, color:'#22c55e', t:'faq_stake'},
-    {icon:Percent, color:'#22c55e', t:'faq_apy'}, {icon:Zap, color:'#eab308', t:'faq_fee'},
-    {icon:ShieldCheck, color:'#ef4444', t:'faq_device'}, {icon:Wallet, color:'#a855f7', t:'faq_bank'}
+    {icon:RefreshCw, color:'#222', t:'faq_restore'}, 
+    {icon:TrendingUp, color:'#22c55e', t:'faq_stake'},
+    {icon:Percent, color:'#22c55e', t:'faq_apy'}, 
+    {icon:Zap, color:'#eab308', t:'faq_fee'},
+    {icon:ShieldCheck, color:'#ef4444', t:'faq_device'}, 
+    {icon:Wallet, color:'#a855f7', t:'faq_bank'},
+    // ★ ここに3つのトラブルシューティングを追加
+    {icon:AlertCircle, color:'#6366f1', t:'faq_trouble_swap'},
+    {icon:AlertCircle, color:'#f59e0b', t:'faq_trouble_price'},
+    {icon:AlertCircle, color:'#10b981', t:'faq_trouble_balance'}
   ];
   return (
     <ScrollView style={styles.content}>
       <HeaderRow title={t('help')} onBack={onBack} />
-      <Text style={styles.sectionHeader}>FAQ</Text>
+      <Text style={styles.sectionHeader}>FAQ & Support</Text>
       {items.map((it, i) => (
         <View key={i} style={styles.helpItemContainer}>
            <View style={styles.helpHeaderRow}>
@@ -157,7 +162,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
   );
 };
 
-// --- アバウト画面 ---
+// --- アバウト画面 (YouTube色修正済) ---
 export const AboutScreen = ({ t, onBack }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   return (
@@ -169,11 +174,12 @@ export const AboutScreen = ({ t, onBack }: any) => {
              <Image source={require('../../assets/splash.png')} style={{width: 60, height: 60, borderRadius: 15}}/>
           </View>
           <Text style={[styles.title, {fontSize:24, marginTop:10}]}>{t('welcome_title')}</Text>
-          <Text style={{color:'#888'}}>Version 1.0.1</Text>
+          <Text style={{color:'#888'}}>Version {packageJson.version}</Text>
         </View>
 
         <View style={styles.settingGroup}>
-           <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="#FF0000" />
+           {/* ★ YouTubeアイコンの色を #CD201F に修正 */}
+           <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="#CD201F" />
            <SettingItem icon={Github} title="Official GitHub" desc="Check Source Code" onPress={() => Linking.openURL(GITHUB_URL)} color="#171515" />
            <TouchableOpacity style={styles.settingItem} onPress={() => setModalVisible(true)}>
               <View style={styles.settingIcon}><Info size={20} color="#fff"/></View>
@@ -183,7 +189,6 @@ export const AboutScreen = ({ t, onBack }: any) => {
         </View>
         <Text style={{textAlign:'center', color:'#444', marginTop:50, marginBottom:30}}>Made with ❤️ for Solana Community</Text>
       </ScrollView>
-
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, {height: '80%'}]}>
