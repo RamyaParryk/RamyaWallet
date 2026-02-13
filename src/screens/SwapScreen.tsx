@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
-  Alert,
   Modal,
   StyleSheet,
   ScrollView,
@@ -21,7 +20,8 @@ import { ReferralProvider } from '@jup-ag/referral-sdk';
 import { MY_PLATFORM_FEE_BPS, MY_FEE_ACCOUNT, JUPITER_BASE_PATH } from '../constants/config';
 import { parseSolanaError } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
-import { ConfirmModal, SuccessModal } from '../components/ActionModals';
+// ★ SimpleAlertModal を追加
+import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 
 const shortenAddress = (address: string, chars = 4) => {
   if (!address) return '';
@@ -55,6 +55,9 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  // ★ エラー用State
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSide, setModalSide] = useState<'from' | 'to'>('from');
@@ -80,12 +83,11 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
     return balances[fromToken.address] || 0;
   }, [fromToken, solBalance, tokenBalances]);
 
-  // ★ From/To でフィルタリング条件を切り分け
+  // フィルタリング条件
   const filteredTokens = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     const balances = tokenBalances || {};
 
-    // 1. 検索ワードがある時は、常に全リストから検索
     if (query) {
       return tokenList.filter((t: any) => {
         const symbol = (t.symbol || "").toLowerCase();
@@ -95,15 +97,12 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
       }).slice(0, 100);
     }
 
-    // 2. 検索ワードがない場合
     if (modalSide === 'from') {
-      // 支払う側：自分の持っているもの + 主要通貨（SOL/USDC）
       return tokenList.filter((t: any) => {
         const bal = t.symbol === 'SOL' ? solBalance : (balances[t.address] || 0);
         return bal > 0 || t.symbol === 'SOL' || t.symbol === 'USDC';
       });
     } else {
-      // 受け取る側：全リスト（厳選リスト）を表示
       return tokenList.slice(0, 100);
     }
   }, [tokenList, searchQuery, tokenBalances, solBalance, modalSide]);
@@ -169,7 +168,8 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
       setQuote(null);
       if (onRetryFetch) onRetryFetch();
     } catch (e: any) {
-      Alert.alert(t('swap_failed'), parseSolanaError(e, t));
+      // ★ Alert.alert を変更
+      setAlert({ visible: true, title: t('swap_failed'), message: parseSolanaError(e, t) });
     } finally { setLoading(false); }
   };
 
@@ -267,7 +267,6 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
             <TextInput style={localStyles.searchInput} placeholder="Search tokens..." placeholderTextColor="#888" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" />
           </View>
 
-          {/* ★ 厳選リストであることを伝えるバナー */}
           <View style={localStyles.verifiedBanner}>
              <Shield size={14} color="#3b82f6" style={{marginRight:6}} />
              <Text style={localStyles.verifiedText}>{t('verified_tokens_desc')}</Text>
@@ -289,7 +288,6 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
                   <View style={localStyles.tokenInfo}>
                     <View style={{flexDirection:'row', alignItems:'center'}}>
                       <Text style={localStyles.tokenSymbolLarge}>{item.symbol}</Text>
-                      {/* ★ 認証バッジ (青チェック) */}
                       <View style={{marginLeft: 6}}><BadgeCheck size={18} color="#3b82f6" fill="#1e1e1e" /></View>
                     </View>
                     <Text style={localStyles.tokenName} numberOfLines={1}>{item.name}</Text>
@@ -306,6 +304,14 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
 
       <ConfirmModal visible={showConfirm} title={t('confirm_swap_title')} message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`} cancelText={t('cancel')} confirmText={t('swap_btn')} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doSwap(); }} />
       <SuccessModal visible={showSuccess} message={t('swap_success_msg')} onDone={() => setShowSuccess(false)} />
+      
+      {/* ★ エラーモーダル配置 */}
+      <SimpleAlertModal 
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => setAlert({ ...alert, visible: false })}
+      />
     </View>
   );
 };
@@ -345,7 +351,6 @@ const localStyles = StyleSheet.create({
   tokenName: { fontSize: 14, color: '#888' },
   tokenBalanceContainer: { alignItems: 'flex-end' },
   tokenBalanceText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  // ★ バナー用スタイル
   verifiedBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.15)', marginHorizontal: 16, marginBottom: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
   verifiedText: { color: '#60a5fa', fontSize: 12, fontWeight: '600', flex: 1 },
 });

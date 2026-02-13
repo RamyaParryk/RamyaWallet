@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Alert, Share } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Share, Keyboard } from 'react-native';
 import { Copy, Share2, Users, X } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 import { styles } from '../styles/globalStyles';
-import { HeaderRow } from '../components/HeaderRow'; // ★さっき作ったやつ
+import { HeaderRow } from '../components/HeaderRow';
 import { shortenAddress } from '../utils/solanaUtils';
+// ★ モーダルをインポート
+import { SimpleAlertModal, SuccessModal } from '../components/ActionModals';
 
 // --- 受取画面 ---
 export const ReceiveScreen = ({ t, wallet, onBack, notify }: any) => {
@@ -54,16 +56,22 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
+  
+  // ★ State (アラート用と成功用)
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'error' });
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSend = async () => {
+    Keyboard.dismiss();
     // バリデーション
     if (!address || !amount) return;
     
-    // 入力されたアドレスが正しいかチェック
+    // アドレスチェック
     try {
       new PublicKey(address);
     } catch {
-      Alert.alert(t('error'), t('invalid_address'));
+      // ★ Alert.alert ではなく setAlert を使う
+      setAlert({ visible: true, title: t('error'), message: t('invalid_address'), type: 'error' });
       return;
     }
 
@@ -71,10 +79,9 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
     try {
       const fromPubkey = new PublicKey(wallet.address);
       const destPubkey = new PublicKey(address);
-      // 小数点計算の誤差を防ぐため、整数に変換してから計算
       const lamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
 
-      // 1. 最新のブロックハッシュを取得（★これが重要！これがないと失敗します）
+      // 1. 最新のブロックハッシュを取得
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
       // 2. トランザクション作成
@@ -86,40 +93,41 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
         })
       );
       
-      // ブロックハッシュと手数料支払者をセット
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = fromPubkey;
 
       // 3. 署名と送信
       const keypair = Keypair.fromSecretKey(wallet.secretKey);
       const signature = await connection.sendTransaction(transaction, [keypair], {
-        skipPreflight: false, // 事前チェックを行う（エラーならここでわかる）
+        skipPreflight: false,
         preflightCommitment: 'confirmed'
       });
       
       notify(t('sending'));
       console.log("Sent signature:", signature);
 
-      // 4. トランザクションの確定待ち（★新しい書き方に修正）
+      // 4. トランザクションの確定待ち
       await connection.confirmTransaction({
         blockhash,
         lastValidBlockHeight,
         signature
       }, 'confirmed');
       
-      Alert.alert(t('send_success'), `Tx: ${signature.slice(0,8)}...`);
-      setAddress(''); setAmount(''); onBack();
+      // ★ 成功モーダルを表示
+      setShowSuccess(true);
+      setAddress(''); 
+      setAmount(''); 
 
     } catch (e: any) {
       console.error(e);
-      Alert.alert(t('send_failed'), e.message || "Unknown error");
+      // ★ エラーモーダルを表示
+      setAlert({ visible: true, title: t('send_failed'), message: e.message || "Unknown error", type: 'error' });
     } finally { 
       setLoading(false); 
     }
   };
 
   return (
-    // returnの中身
     <View style={styles.content}>
       <HeaderRow title={t('send')} onBack={onBack} rightIcon={<TouchableOpacity onPress={() => setShowContacts(true)}><Users size={24} color="#a855f7"/></TouchableOpacity>} />
       <ScrollView>
@@ -146,6 +154,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
         </TouchableOpacity>
       </ScrollView>
 
+      {/* アドレス帳モーダル */}
       {showContacts && (
         <View style={styles.modalOverlay}>
            <View style={styles.modalContent}>
@@ -161,6 +170,20 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
            </View>
         </View>
       )}
+
+      {/* ★ ここに新しいモーダルを配置 */}
+      <SimpleAlertModal 
+        visible={alert.visible} 
+        title={alert.title} 
+        message={alert.message} 
+        type={alert.type}
+        onClose={() => setAlert({ ...alert, visible: false })} 
+      />
+      <SuccessModal 
+        visible={showSuccess} 
+        message={t('send_success')} 
+        onDone={() => { setShowSuccess(false); onBack(); }} 
+      />
     </View>
   );
 };

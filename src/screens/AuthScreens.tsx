@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { ArrowLeft, X } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 import { styles } from '../styles/globalStyles';
+// ★ モーダルをインポート
+import { SimpleAlertModal } from '../components/ActionModals';
 
 // --- ロック解除画面 ---
 export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLogout }: any) => {
   const [pin, setPin] = useState('');
   const rnBiometrics = new ReactNativeBiometrics();
+  // ★ エラー用State
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   useEffect(() => {
     if (biometricsEnabled) {
@@ -30,7 +34,8 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
         if (newPin === correctPin) {
           setTimeout(onUnlock, 100);
         } else {
-          Alert.alert(t('error'), t('pin_mismatch'), [{ text: "OK", onPress: () => setPin('') }]);
+          // ★ Alert.alert を変更
+          setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
         }
       }
     }
@@ -67,6 +72,14 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
       <TouchableOpacity style={{marginTop: 30}} onPress={onLogout}>
         <Text style={{color: '#666'}}>{t('logout_reset')}</Text>
       </TouchableOpacity>
+
+      {/* ★ モーダル配置 */}
+      <SimpleAlertModal 
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => { setAlert({ ...alert, visible: false }); setPin(''); }}
+      />
     </View>
   );
 };
@@ -76,6 +89,8 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [pin, setPin] = useState('');
   const [firstPin, setFirstPin] = useState('');
+  // ★ エラー用State
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const handlePress = (num: string) => {
     if (pin.length < 4) {
@@ -96,7 +111,8 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
       if (inputPin === firstPin) {
         onSuccess(inputPin);
       } else {
-        Alert.alert(t('error'), t('pin_mismatch'), [{ text: "OK", onPress: () => { setStep('create'); setPin(''); setFirstPin(''); } }]);
+        // ★ Alert.alert を変更
+        setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
       }
     }
   };
@@ -122,10 +138,22 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
         <TouchableOpacity style={styles.numBtn} onPress={() => handlePress("0")}>
           <Text style={styles.numText}>0</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.numBtn} onPress={() => handlePress("0")}>
+        <TouchableOpacity style={styles.numBtn} onPress={() => setPin(pin.slice(0, -1))}>
           <ArrowLeft size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* ★ モーダル配置 */}
+      <SimpleAlertModal 
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => { 
+          setAlert({ ...alert, visible: false }); 
+          // エラー後は最初から入力させる
+          setStep('create'); setPin(''); setFirstPin(''); 
+        }}
+      />
     </View>
   );
 };

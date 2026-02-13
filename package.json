@@ -36,7 +36,8 @@
     "react-native-svg": "^15.15.3",
     "react-native-url-polyfill": "^3.0.0",
     "stream-browserify": "^3.0.0",
-    "text-encoding-polyfill": "^0.6.7"
+    "text-encoding-polyfill": "^0.6.7",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

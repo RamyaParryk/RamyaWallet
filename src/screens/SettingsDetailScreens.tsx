@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, Alert } from 'react-native';
-// ★ AlertCircle を追加しました
+import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal } from 'react-native';
 import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
@@ -9,12 +8,13 @@ import { HeaderRow } from '../components/HeaderRow';
 import { YOUTUBE_URL, GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
+// モーダルインポート
+import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 
-// ローカル用 SettingItem
+
 const SettingItem = ({ icon: Icon, title, desc, onPress, color="#222" }: any) => (
   <TouchableOpacity style={styles.settingItem} onPress={onPress}>
      <View style={[styles.settingIcon, {backgroundColor: color}]}>
-       {/* アイコン色は背景が暗い色なら白にするように修正 */}
        <Icon size={20} color="#fff"/>
      </View>
      <View style={{flex:1}}>
@@ -25,31 +25,48 @@ const SettingItem = ({ icon: Icon, title, desc, onPress, color="#222" }: any) =>
   </TouchableOpacity>
 );
 
-// --- セキュリティ設定画面 (変更なし) ---
-export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack, network }: any) => {
+// --- セキュリティ設定画面 ---
+export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack }: any) => {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const rnBiometrics = new ReactNativeBiometrics();
+  
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
+  const [confirm, setConfirm] = useState<any>({ visible: false });
+
+  // ★単語数をカウント
+  const wordCount = wallet?.mnemonic ? wallet.mnemonic.trim().split(/\s+/).length : 0;
+
   if (!wallet) return <View style={styles.content} />;
+  
   const handleBiometrics = async (enabled: boolean) => {
     if (enabled) {
       if (!hasPin) {
-         Alert.alert(t('pin_required'), "", [{ text: t('cancel'), style: "cancel" }, { text: t('pin_setup'), onPress: onSetupPin }]);
+         setConfirm({
+           visible: true,
+           title: t('pin_required'),
+           message: "",
+           confirmText: t('pin_setup'),
+           onConfirm: () => { setConfirm({ ...confirm, visible: false }); onSetupPin(); }
+         });
          return;
       }
       try {
         const { available } = await rnBiometrics.isSensorAvailable();
             if (!available) {
-                Alert.alert(t('error'), t('biometrics_error'));
+                setAlert({ visible: true, title: t('error'), message: t('biometrics_error') });
                 return;
             }
         const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('biometrics') });
         if (success) setBiometrics(true);
-      } catch(e) { Alert.alert(t('auth_cancelled')); }
+      } catch(e) { 
+        setAlert({ visible: true, title: t('auth_cancelled'), message: "" });
+      }
     } else {
       setBiometrics(false);
     }
   };
+
   return (
     <ScrollView style={styles.content}>
       <HeaderRow title={t('security')} onBack={onBack} />
@@ -61,7 +78,8 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
       <Text style={[styles.sectionHeader, {marginTop:30}]}>{t('recovery_phrase')}</Text>
       <View style={styles.infoCard}>
          <View style={styles.rowBetween}>
-           <Text style={styles.label}>12 words</Text>
+           {/* ★ここを修正: 自動カウントした単語数を表示 */}
+           <Text style={styles.label}>{wordCount > 0 ? `${wordCount} words` : "Secret Phrase"}</Text>
            <TouchableOpacity onPress={() => setShowMnemonic(!showMnemonic)}><Text style={styles.linkText}>{showMnemonic ? t('hide') : t('show')}</Text></TouchableOpacity>
          </View>
          {showMnemonic && <Text style={styles.secretText}>{wallet?.mnemonic || "Unavailable"}</Text>}
@@ -74,11 +92,27 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
          </View>
          {showKey && wallet?.secretKey && <Text style={styles.secretText}>{secretKeyToString(wallet.secretKey)}</Text>}
       </View>
+
+      <SimpleAlertModal 
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => setAlert({ ...alert, visible: false })}
+      />
+      <ConfirmModal
+        visible={confirm.visible}
+        title={confirm.title}
+        message={confirm.message}
+        confirmText={confirm.confirmText}
+        cancelText={t('cancel')}
+        onCancel={() => setConfirm({ ...confirm, visible: false })}
+        onConfirm={confirm.onConfirm}
+      />
     </ScrollView>
   );
 };
 
-// --- ネットワーク設定画面 (変更なし) ---
+// --- ネットワーク設定画面 ---
 export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRpc, setRpc, onBack }: any) => {
   const networks = [{ id: 'mainnet-beta', name: 'Mainnet Beta', desc: 'Real Money' }, { id: 'devnet', name: 'Devnet', desc: 'Test Env' }];
   const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius' }, { id: 'QuickNode', name: 'QuickNode' }];
@@ -109,7 +143,7 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
   );
 };
 
-// --- 言語設定画面 (変更なし) ---
+// --- 言語設定画面 ---
 export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   const langs = [
     { code: 'ja', label: '日本語' }, { code: 'en', label: 'English' }, { code: 'es', label: 'Español' },
@@ -130,7 +164,7 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   );
 };
 
-// --- ヘルプ画面 (トラブルシューティング3項目を反映) ---
+// --- ヘルプ画面 ---
 export const HelpScreen = ({ t, onBack }: any) => {
   const items = [
     {icon:RefreshCw, color:'#222', t:'faq_restore'}, 
@@ -139,7 +173,6 @@ export const HelpScreen = ({ t, onBack }: any) => {
     {icon:Zap, color:'#eab308', t:'faq_fee'},
     {icon:ShieldCheck, color:'#ef4444', t:'faq_device'}, 
     {icon:Wallet, color:'#a855f7', t:'faq_bank'},
-    // ★ ここに3つのトラブルシューティングを追加
     {icon:AlertCircle, color:'#6366f1', t:'faq_trouble_swap'},
     {icon:AlertCircle, color:'#f59e0b', t:'faq_trouble_price'},
     {icon:AlertCircle, color:'#10b981', t:'faq_trouble_balance'}
@@ -162,7 +195,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
   );
 };
 
-// --- アバウト画面 (YouTube色修正済) ---
+// --- アバウト画面 ---
 export const AboutScreen = ({ t, onBack }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   return (
@@ -178,7 +211,6 @@ export const AboutScreen = ({ t, onBack }: any) => {
         </View>
 
         <View style={styles.settingGroup}>
-           {/* ★ YouTubeアイコンの色を #CD201F に修正 */}
            <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="#CD201F" />
            <SettingItem icon={Github} title="Official GitHub" desc="Check Source Code" onPress={() => Linking.openURL(GITHUB_URL)} color="#171515" />
            <TouchableOpacity style={styles.settingItem} onPress={() => setModalVisible(true)}>

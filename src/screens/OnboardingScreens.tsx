@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Image, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Zap, Download, ShieldCheck } from 'lucide-react-native';
 import { validateMnemonic } from 'bip39';
 
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { wait } from '../utils/solanaUtils';
+// ★ モーダルインポート
+import { SimpleAlertModal } from '../components/ActionModals';
 
 // --- スプラッシュ画面 ---
 export const SplashScreen = () => (
@@ -36,17 +38,19 @@ export const WelcomeScreen = ({ t, onStart, onImport }: any) => (
 export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
   const [mnemonic, setMnemonic] = useState('');
   const [loading, setLoading] = useState(false);
+  // ★ エラー用State
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const handleImport = async () => {
-    // ▼▼▼ 改行(\n)や複数の空白を「1つの半角スペース」に変換する正規表現 ▼▼▼
     const cleanMnemonic = mnemonic
-      .replace(/\s+/g, ' ') // 改行やタブ、連続スペースを全て「1つのスペース」に置換
+      .replace(/\s+/g, ' ') 
       .trim()
       .toLowerCase(); 
 
     if (!cleanMnemonic) return;
     if (!validateMnemonic(cleanMnemonic)) {
-      Alert.alert(t('error'), t('invalid_phrase'));
+      // ★ Alert.alert -> SimpleAlertModal
+      setAlert({ visible: true, title: t('error'), message: t('invalid_phrase') });
       return;
     }
     setLoading(true);
@@ -60,7 +64,6 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
       <ScrollView contentContainerStyle={styles.content}>
         <HeaderRow title={t('import_wallet')} onBack={onBack} />
         
-        {/* インポート専用の文言 */}
         <Text style={styles.descText}>{t('import_phrase_desc')}</Text>
         
         <TextInput 
@@ -78,6 +81,14 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
           {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.primaryButtonText}>{t('import_wallet')}</Text>}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* ★ モーダル配置 */}
+      <SimpleAlertModal 
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => setAlert({ ...alert, visible: false })}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -100,7 +111,6 @@ export const CreateWalletScreen = ({ t, wallet, onConfirm }: any) => {
     <View style={styles.content}>
       <Text style={styles.screenTitle}>{t('secret_phrase_title')}</Text>
       
-      {/* ★ ここは「書き留めてください」のままでOK */}
       <Text style={styles.descText}>{t('secret_phrase_desc')}</Text>
       
       <View style={styles.mnemonicContainer}>
