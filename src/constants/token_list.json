@@ -34,6 +34,13 @@
     "decimals": 9,
     "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn/logo.png"
   },
+{
+    "address": "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3",
+    "symbol": "SKR",
+    "name": "Seeker",
+    "decimals": 9,
+    "logoURI": "https://assets.coingecko.com/coins/images/70974/standard/seeker-logo.jpg?1764922774"
+  },
   {
     "address": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     "symbol": "BONK",

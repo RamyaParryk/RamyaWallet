@@ -38,7 +38,7 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
   const [loading, setLoading] = useState(false);
 
   const handleImport = async () => {
-    // ▼▼▼ 修正: 改行(\n)や複数の空白を「1つの半角スペース」に変換する正規表現を追加 ▼▼▼
+    // ▼▼▼ 改行(\n)や複数の空白を「1つの半角スペース」に変換する正規表現 ▼▼▼
     const cleanMnemonic = mnemonic
       .replace(/\s+/g, ' ') // 改行やタブ、連続スペースを全て「1つのスペース」に置換
       .trim()
@@ -59,7 +59,10 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <HeaderRow title={t('import_wallet')} onBack={onBack} />
-        <Text style={styles.descText}>{t('secret_phrase_desc')}</Text>
+        
+        {/* インポート専用の文言 */}
+        <Text style={styles.descText}>{t('import_phrase_desc')}</Text>
+        
         <TextInput 
           style={styles.mnemonicInput}
           placeholder="apple banana cherry..."
@@ -96,7 +99,10 @@ export const CreateWalletScreen = ({ t, wallet, onConfirm }: any) => {
   return (
     <View style={styles.content}>
       <Text style={styles.screenTitle}>{t('secret_phrase_title')}</Text>
+      
+      {/* ★ ここは「書き留めてください」のままでOK */}
       <Text style={styles.descText}>{t('secret_phrase_desc')}</Text>
+      
       <View style={styles.mnemonicContainer}>
         {words.map((word: string, i: number) => (
           <View key={i} style={styles.wordTag}>

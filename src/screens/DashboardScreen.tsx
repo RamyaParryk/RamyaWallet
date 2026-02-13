@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, Image, StyleSheet } from 'react-native';
 import {
-  RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, ExternalLink
+  RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, ExternalLink, Smartphone
 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { styles } from '../styles/globalStyles';
@@ -47,30 +47,41 @@ const AssetItem = ({ symbol, name, amount, price, logoURI, status }: any) => {
   );
 };
 
-// ★ 修正: t (翻訳関数) を props として受け取るように変更
+// ★ 公式トークンバナー (SKR追加版)
 const PromoBanners = ({ t }: any) => {
   const promos = [
+    //     {
+    //   id: 'skr',
+    //   symbol: 'SKR',
+    //   name: 'Solana Mobile Seeker',
+    //   color: '#14F195', // Solana Green/Teal
+    //   logo: 'https://assets.coingecko.com/coins/images/70974/standard/seeker-logo.jpg?1764922774',
+    //   url: 'https://solanamobile.com/', 
+    //   isPump: false
+    // },
     {
       id: 'rmyp',
       symbol: 'RMYP',
       name: 'RamyaParryk',
-      color: '#a855f7',
+      color: '#a855f7', // 紫
       logo: 'https://images.pump.fun/coin-image/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W?variant=86x86',
-      url: 'https://pump.fun/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W' 
+      url: 'https://pump.fun/Gn1fP9M6eD5aPADWRy87DH3uVDTkFFNsy6dAu5k5ER6W',
+      isPump: true
     },
     {
       id: 'kcar',
       symbol: 'KCAR',
       name: 'K-Car',
-      color: '#ef4444',
+      color: '#ef4444', // 赤
       logo: 'https://images.pump.fun/coin-image/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765?variant=86x86',
-      url: 'https://pump.fun/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765'
+      url: 'https://pump.fun/HPPiyhzm2MWn4HSne6r6soMd4fkZ9pczAA4Cid3yL765',
+      isPump: true
     }
   ];
 
   return (
     <View style={{ marginTop: 20, marginBottom: 10 }}>
-      {/* ★ 修正: 翻訳キーを使用 */}
+      {/* 翻訳キーを使用 */}
       <Text style={[styles.sectionTitle, { marginBottom: 10, marginLeft: 4, fontSize: 18 }]}>
         {t('official_meme_token')}
       </Text>
@@ -82,13 +93,22 @@ const PromoBanners = ({ t }: any) => {
             style={[localStyles.promoCard, { borderColor: p.color }]}
             onPress={() => Linking.openURL(p.url)}
           >
-            <Image source={{ uri: p.logo }} style={localStyles.promoLogo} />
+            {/* 画像がない場合のフォールバック付き */}
+            {p.logo ? (
+              <Image source={{ uri: p.logo }} style={localStyles.promoLogo} />
+            ) : (
+              <View style={[localStyles.promoLogo, { backgroundColor: p.color, justifyContent: 'center', alignItems: 'center' }]}>
+                 <Smartphone size={20} color="#000" />
+              </View>
+            )}
+            
             <View>
               <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
                 <Text style={[localStyles.promoTitle, { color: p.color }]}>{p.symbol}</Text>
+                {/* 認証バッジ */}
                 <BadgeCheck size={14} color={p.color} fill="#1e1e1e" />
               </View>
-              <Text style={localStyles.promoDesc}>{p.name}</Text>
+              <Text style={localStyles.promoDesc} numberOfLines={1}>{p.name}</Text>
             </View>
             <ExternalLink size={16} color="#666" style={{ marginLeft: 'auto' }} />
           </TouchableOpacity>
@@ -131,7 +151,7 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
         </View>
       </View>
 
-      {/* ★ 修正: t を渡す */}
+      {/* 公式トークンバナー (SKR入り) */}
       <PromoBanners t={t} />
 
       <View style={styles.assetsCard}>
@@ -184,5 +204,6 @@ const localStyles = StyleSheet.create({
   promoDesc: {
     fontSize: 12,
     color: '#aaa',
+    maxWidth: 100, // 文字がはみ出ないように調整
   },
 });
