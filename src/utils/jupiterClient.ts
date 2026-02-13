@@ -87,7 +87,7 @@ export const fetchPrices = async (ids: string) => {
     console.warn("[CLIENT] CoinGecko失敗:", e);
   }
 
-  // --- Plan B: Jupiter Price API v2 ---
+  // Jupiter Price API v2 ---
   try {
     const url = `${JUPITER_PRICE_API}?ids=${ids}`;
     const res = await fetch(url, { headers: COMMON_HEADERS });

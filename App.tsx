@@ -366,16 +366,8 @@ export default function App() {
             }
           }
 
-          const TRUSTED_MINTS = [
-            'So11111111111111111111111111111111111111112', 
-            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 
-            'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', 
-            'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', 
-            'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', 
-            'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', 
-          ];
-
-          const isVerified = listedToken || TRUSTED_MINTS.includes(mint);
+          // リストにあるのは信頼済みにする
+          const isVerified = !!listedToken;
 
           tempAssets.push({
             mint: mint,
