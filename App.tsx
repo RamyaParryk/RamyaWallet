@@ -3,8 +3,8 @@ import 'react-native-get-random-values';
 import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
-import React, { useEffect, useCallback, useMemo } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, StatusBar, BackHandler } from 'react-native';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import { SafeAreaView, View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
 import { Keypair } from '@solana/web3.js';
@@ -51,14 +51,15 @@ import { useAssetStore } from './src/state/assetStore';
 import { useContactsStore } from './src/state/contactsStore';
 import { useConnectionStore } from './src/state/connectionStore';
 
+// ✅ token list cache
+import { loadTokenListFast, refreshTokenListInBackground } from './src/services/tokenListCache';
+
 // ✅ Storage facade
 import * as secureStorage from './src/storage/secureStorage';
 
 // ✅ Services
 import { refreshAssetsService } from './src/services/refreshAssets';
-
-// Token list / metadata
-import { fetchTokenList, warmupNetwork, fetchOnChainMetadata } from './src/services/jupiterService';
+import { warmupNetwork } from './src/services/jupiterService';
 
 const NavButton = ({
   icon: Icon,
@@ -75,6 +76,14 @@ const NavButton = ({
     <Icon size={24} color={active ? '#a855f7' : '#666'} />
     <Text style={[styles.navText, active && { color: '#a855f7' }]}>{label}</Text>
   </TouchableOpacity>
+);
+
+/** 初回同期が終わるまで main を出さないための軽量ローダ */
+const BootLoading = ({ title = 'Loading...' }: { title?: string }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <ActivityIndicator />
+    <Text style={{ marginTop: 12, color: '#aaa' }}>{title}</Text>
+  </View>
 );
 
 export default function App() {
@@ -128,16 +137,14 @@ export default function App() {
   // Asset store
   // -------------------------
   const assets = useAssetStore((s) => s.assets);
-  const setAssets = useAssetStore((s) => s.setAssets);
-
   const totalValue = useAssetStore((s) => s.totalValue);
-  const setTotalValue = useAssetStore((s) => s.setTotalValue);
 
-  const tokenMap = useAssetStore((s) => s.tokenMap);
-  const setTokenMap = useAssetStore((s) => s.setTokenMap);
+  const setAssets = useAssetStore((s: any) => s.setAssets);
+  const setTotalValue = useAssetStore((s: any) => s.setTotalValue);
 
+  const setTokenMap = useAssetStore((s: any) => s.setTokenMap);
   const tokenList = useAssetStore((s) => s.tokenList);
-  const setTokenList = useAssetStore((s) => s.setTokenList);
+  const setTokenList = useAssetStore((s: any) => s.setTokenList);
 
   const resetAssetAll = useAssetStore((s) => s.resetAll);
 
@@ -152,11 +159,32 @@ export default function App() {
   // Connection store
   // -------------------------
   const connection = useConnectionStore((s) => s.connection);
-  // あなたの connectionStore の関数名に合わせてる（initFromSettings）
   const initConnection = useConnectionStore((s: any) => s.initFromSettings ?? s.init);
-  const rebuildConnection = useConnectionStore((s) => s.rebuild);
+  const rebuildConnection = useConnectionStore((s: any) => s.rebuild);
 
   const t = useTranslation(lang);
+
+  // -------------------------
+  // Boot sync gate（ここが肝）
+  // -------------------------
+  const [bootSyncDone, setBootSyncDone] = useState(false);
+  const bootSyncStartedRef = useRef(false);
+
+  // screenがmainになるたびに「まだ同期してなければ」ローダを出したい
+  useEffect(() => {
+    if (currentScreen === 'main') {
+      // 既に同期済みならそのまま
+      // 未同期ならローダ状態に戻す
+      if (!bootSyncDone) {
+        // noop（表示は render 側で切替）
+      }
+    }
+    // welcome/import/create などでは同期ゲート不要
+    if (currentScreen === 'welcome' || currentScreen === 'import' || currentScreen === 'loading' || currentScreen === 'create') {
+      setBootSyncDone(true);
+      bootSyncStartedRef.current = false;
+    }
+  }, [currentScreen, bootSyncDone]);
 
   // -------------------------
   // Android Back handling
@@ -190,47 +218,34 @@ export default function App() {
   }, [currentScreen, setScreen]);
 
   // -------------------------
-  // Token list fetch
+  // Token list: fast + background update
   // -------------------------
   const fetchTokens = useCallback(async () => {
-    console.log('[APP] 内包リストのロードを開始します...');
     try {
-      const tokens = await fetchTokenList();
-      if (tokens && tokens.length > 0) {
-        const seen = new Set<string>();
-        const uniqueTokens = tokens.filter((tok: any) => {
-          const addr = tok.address || tok.mint;
-          if (!addr || seen.has(addr)) return false;
-          seen.add(addr);
-          return true;
-        });
+      const fast = await loadTokenListFast({ requireLogo: true });
+      console.log('[APP] tokenList fast:', fast.source, fast.tokens.length);
 
-        console.log(`[APP] ✅ リスト取得完了: ${uniqueTokens.length} tokens`);
+      setTokenList(fast.tokens);
 
-        const updatedTokens = await Promise.all(
-          uniqueTokens.map(async (tok: any) => {
-            if (!tok.logoURI || tok.logoURI === '') {
-              try {
-                const meta = await fetchOnChainMetadata(tok.address || tok.mint);
-                if (meta?.logoURI) return { ...tok, logoURI: meta.logoURI };
-              } catch {}
-            }
-            return tok;
-          })
-        );
+      const map = new Map<string, any>();
+      fast.tokens.forEach((tok: any) => {
+        const key = tok.address || tok.mint;
+        if (key) map.set(key, tok);
+      });
+      setTokenMap(map);
 
-        setTokenList(updatedTokens);
+      const updated = await refreshTokenListInBackground({ requireLogo: true });
+      if (updated?.tokens?.length) {
+        console.log('[APP] tokenList updated:', updated.source, updated.tokens.length);
 
-        const map = new Map<string, any>();
-        updatedTokens.forEach((tok: any) => {
+        setTokenList(updated.tokens);
+
+        const map2 = new Map<string, any>();
+        updated.tokens.forEach((tok: any) => {
           const key = tok.address || tok.mint;
-          if (key) map.set(key, tok);
+          if (key) map2.set(key, tok);
         });
-        setTokenMap(map);
-
-        console.log(`[APP] ✨ TokenMap作成完了 (Size: ${map.size})`);
-      } else {
-        console.log('[APP] ⚠️ トークンリストが空です');
+        setTokenMap(map2);
       }
     } catch (e) {
       console.log('[APP] fetchTokens error:', e);
@@ -242,14 +257,13 @@ export default function App() {
   // -------------------------
   useEffect(() => {
     const initializeApp = async () => {
-      await wait(1000);
+      await wait(400);
 
       try {
         const { settings, contacts, language, wallet } = await secureStorage.loadAll();
 
         if (contacts) setContacts(contacts);
         if (language) setLang(language);
-
         if (wallet) setWallet(wallet);
 
         if (settings) {
@@ -258,7 +272,7 @@ export default function App() {
           if (settings.network) setNetwork(settings.network as any);
         }
       } catch (e) {
-        console.log('Load error:', e);
+        console.log('[APP] loadAll error:', e);
       }
 
       console.log('[APP] 🚀 初期化プロセス: warmup...');
@@ -268,20 +282,25 @@ export default function App() {
 
       await fetchTokens();
 
-      const hasWallet = !!useWalletStore.getState().wallet;
-      const storedPin = useSettingsStore.getState().pin;
-
-      if (hasWallet) {
-        if (storedPin) setScreen('unlock');
-        else setScreen('main');
-      } else {
-        setScreen('welcome');
-      }
-
       // Connection初期化（settings反映後）
       try {
         initConnection?.();
       } catch {}
+
+      const hasWallet = !!useWalletStore.getState().wallet;
+      const storedPin = useSettingsStore.getState().pin;
+
+      if (hasWallet) {
+        // mainへ行く前に bootSyncDone を false にしてゲートを有効化
+        setBootSyncDone(false);
+        bootSyncStartedRef.current = false;
+
+        if (storedPin) setScreen('unlock');
+        else setScreen('main');
+      } else {
+        setBootSyncDone(true);
+        setScreen('welcome');
+      }
     };
 
     initializeApp();
@@ -292,7 +311,7 @@ export default function App() {
   // Connection rebuild on network change
   // -------------------------
   useEffect(() => {
-    rebuildConnection({ network });
+    rebuildConnection?.({ network });
   }, [network, rebuildConnection]);
 
   // -------------------------
@@ -311,7 +330,7 @@ export default function App() {
       try {
         await secureStorage.saveSettings(next as any);
       } catch (e) {
-        console.log('Save settings error:', e);
+        console.log('[APP] saveSettings error:', e);
       }
     },
     []
@@ -321,7 +340,7 @@ export default function App() {
     try {
       await secureStorage.saveWallet(w);
     } catch (e) {
-      console.log('Save wallet error:', e);
+      console.log('[APP] saveWallet error:', e);
     }
   }, []);
 
@@ -362,38 +381,63 @@ export default function App() {
       resetContacts();
       resetAssetAll();
 
+      setBootSyncDone(true);
+      bootSyncStartedRef.current = false;
+
       setScreen('welcome');
       closeLogoutConfirm();
     } catch (e) {
-      console.log(e);
+      console.log('[APP] logout error:', e);
     }
   }, [closeLogoutConfirm, resetAssetAll, resetAuth, resetContacts, resetWallet, setScreen]);
 
   // -------------------------
   // Refresh assets (service)
   // -------------------------
-  const refreshAssets = useCallback(async () => {
-    const w = useWalletStore.getState().wallet;
-    if (!w || !connection) return;
-
+  const refreshAssets = useCallback(async (force?: boolean) => {
     try {
-      const { assets: nextAssets, totalValue: nextTotal } = await refreshAssetsService({
-        connection,
-        walletAddress: w.address,
-        tokenMap: useAssetStore.getState().tokenMap,
-        onTokenMapUpdate: (m: Map<string, any>) => setTokenMap(m),
-      });
-
-      setAssets(nextAssets);
-      setTotalValue(nextTotal);
+      await refreshAssetsService({ force: !!force });
     } catch (e) {
       console.error('[REFRESH] エラー:', e);
     }
-  }, [connection, setAssets, setTokenMap, setTotalValue]);
+  }, []);
 
+  /**
+   * ✅ 「wallet && connection の成立タイミング」を逃さず、初回同期が終わるまで main を出さない
+   * - currentScreen が main の時だけ動作
+   * - unlock -> main 直後も確実に走る
+   */
   useEffect(() => {
-    if (wallet && connection) refreshAssets();
-  }, [wallet, connection, refreshAssets]);
+    if (currentScreen !== 'main') return;
+    if (bootSyncDone) return;
+
+    const tick = async () => {
+      if (bootSyncStartedRef.current) return;
+
+      const w = useWalletStore.getState().wallet;
+      const c = useConnectionStore.getState().connection;
+
+      if (!w || !c) return;
+
+      bootSyncStartedRef.current = true;
+
+      console.log('[APP] boot sync start');
+      try {
+        await refreshAssets(true);
+        console.log('[APP] boot sync done');
+        setBootSyncDone(true);
+      } catch (e) {
+        console.log('[APP] boot sync error', e);
+        // 失敗してももう一回走れるようにする
+        bootSyncStartedRef.current = false;
+      }
+    };
+
+    const id = setInterval(tick, 350);
+    tick();
+
+    return () => clearInterval(id);
+  }, [currentScreen, bootSyncDone, refreshAssets]);
 
   // -------------------------
   // PIN set
@@ -450,6 +494,10 @@ export default function App() {
         await persistWallet(newWallet);
         await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
 
+        // ✅ mainへ入るので同期ゲートを有効化
+        setBootSyncDone(false);
+        bootSyncStartedRef.current = false;
+
         setScreen('main');
         showNotification(t('wallet_restored'));
         return true;
@@ -473,7 +521,7 @@ export default function App() {
   );
 
   const createWallet = useCallback(async () => {
-    await wait(500);
+    await wait(300);
 
     try {
       const mnemonic = generateMnemonic(128);
@@ -518,6 +566,11 @@ export default function App() {
             onConfirm={async () => {
               if (wallet) await persistWallet(wallet);
               await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
+
+              // ✅ mainへ入るので同期ゲートを有効化
+              setBootSyncDone(false);
+              bootSyncStartedRef.current = false;
+
               setScreen('main');
             }}
           />
@@ -532,12 +585,21 @@ export default function App() {
             t={t}
             correctPin={pin}
             biometricsEnabled={biometricsEnabled}
-            onUnlock={() => setScreen('main')}
+            onUnlock={() => {
+              // ✅ unlock直後 mainで同期させる
+              setBootSyncDone(false);
+              bootSyncStartedRef.current = false;
+              setScreen('main');
+            }}
             onLogout={handleLogout}
           />
         );
 
       case 'main':
+        // ✅ ここが「同期完了後にダッシュボード表示」
+        if (!bootSyncDone) {
+          return <BootLoading title={t('processing')} />;
+        }
         return (
           <MainScreen
             t={t}
@@ -546,7 +608,7 @@ export default function App() {
             wallet={wallet}
             assets={assets}
             totalValue={totalValue}
-            onRefresh={refreshAssets}
+            onRefresh={() => refreshAssets(true)}
             tokenList={tokenList}
             network={network}
             connection={connection}

@@ -147,8 +147,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_price_desc: "データの読み込み制限にかかっている可能性があります。資産は安全ですので、しばらく時間を置いてからアプリを再起動してみてください。",
     faq_trouble_balance: "残高が更新されない時は？",
     faq_trouble_balance_desc: "ネットワークが混雑していると、反映まで1〜2分かかることがあります。しばらく待ってから、アプリを開き直してみてください。",
-
-    verified_tokens_desc: "現在、厳選された44種類の優良トークンへのみスワップ可能です。",
+    verified_only: "検証済みのみ",
+    verified_tokens_desc: "検証済みトークンのみ、検索＆スワップ可能です。",
     official_meme_token: "⭐ 公式ミームトークン",
   },
   en: {
@@ -300,7 +300,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "Balance not updating?",
     faq_trouble_balance_desc: "Network congestion can cause delays of 1-2 minutes. Please wait a moment and try reopening the app.",
 
-    verified_tokens_desc: "Currently, you can only swap to 44 selected verified tokens.",
+    verified_only: "Verified Only",
+    verified_tokens_desc: "Only verified tokens can be searched and swapped.",
     official_meme_token: "⭐ Official Meme Tokens",
   },
   // スペイン語
@@ -453,8 +454,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "¿Saldo no actualizado?",
     faq_trouble_balance_desc: "La congestión puede causar retrasos de 1-2 min. Espere un momento y vuelva a abrir la app.",
     
-    verified_tokens_desc: "Actualmente, solo se puede intercambiar a 44 tokens verificados seleccionados.",
-    official_meme_token: "⭐ Tokens Meme Oficiales",
+    verified_only: "Solo verificados",
+    verified_tokens_desc: "Solo se pueden buscar e intercambiar tokens verificados.",
   },
   // ロシア語
   ru: {
@@ -606,7 +607,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "Баланс не обновляется?",
     faq_trouble_balance_desc: "Из-за нагрузки возможны задержки 1-2 мин. Подождите и перезапустите приложение.",
 
-    verified_tokens_desc: "В настоящее время обмен возможен только на 44 проверенных токена.",
+    verified_only: "Только вер.",
+    verified_tokens_desc: "Поиск и обмен доступны только для верифицированных токенов.",
     official_meme_token: "⭐ Официальные Мем-Токены",
   },
   // ドイツ語
@@ -759,7 +761,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "Guthaben aktualisiert nicht?",
     faq_trouble_balance_desc: "Netzwerkstau kann 1-2 Min Verzögerung verursachen. Warten Sie kurz und öffnen Sie die App erneut.",
 
-    verified_tokens_desc: "Derzeit ist ein Tausch nur in 44 ausgewählte verifizierte Token möglich.",
+    verified_only: "Nur verifiziert",
+    verified_tokens_desc: "Nur verifizierte Token können gesucht und getauscht werden.",
     official_meme_token: "⭐ Offizielle Meme-Token",
   },
   zh: {
@@ -911,7 +914,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "余额未更新？",
     faq_trouble_balance_desc: "网络拥堵可能导致1-2分钟延迟。请稍候重新打开应用。",
 
-    verified_tokens_desc: "目前仅支持兑换为 44 种经过验证的精选代币。",
+    verified_only: "仅限已验证",
+    verified_tokens_desc: "仅支持搜索和兑换已验证的代币。",
     official_meme_token: "⭐ 官方Meme代币",
   },
   ko: {
@@ -1063,7 +1067,8 @@ export const TRANSLATIONS: any = {
     faq_trouble_balance: "잔액 갱신이 안 되나요?",
     faq_trouble_balance_desc: "네트워크 혼잡으로 1~2분 지연될 수 있습니다. 잠시 후 앱을 다시 열어보세요.",
 
-    verified_tokens_desc: "현재 엄선된 44개의 인증된 토큰으로만 스왑 가능합니다.",
+    verified_only: "검증됨",
+    verified_tokens_desc: "검증된 토큰만 검색 및 스왑할 수 있습니다.",
     official_meme_token: "⭐ 공식 밈 토큰",
   }
 };

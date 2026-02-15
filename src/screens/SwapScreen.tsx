@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArrowDown, X, Search, Shield, BadgeCheck } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
@@ -20,13 +21,26 @@ import { ReferralProvider } from '@jup-ag/referral-sdk';
 import { MY_PLATFORM_FEE_BPS, MY_FEE_ACCOUNT, JUPITER_BASE_PATH } from '../constants/config';
 import { parseSolanaError } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
-// ★ SimpleAlertModal を追加
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
+
+const BAD_MINTS_KEY = 'ramya_bad_icon_mints_v1';
 
 const shortenAddress = (address: string, chars = 4) => {
   if (!address) return '';
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 };
+
+function isValidLogo(uri?: string) {
+  if (!uri) return false;
+  const s = String(uri).trim();
+  if (!s) return false;
+  const lower = s.toLowerCase();
+  if (lower.endsWith('.svg')) return false;
+  if (lower.startsWith('data:image/svg')) return false;
+  // ipfs:// は TokenIcon で変換できるが「消したい」ならここで落とす
+  if (lower.startsWith('ipfs://')) return false;
+  return true;
+}
 
 const jupiterQuoteApi = createJupiterApiClient({
   basePath: JUPITER_BASE_PATH,
@@ -35,77 +49,123 @@ const jupiterQuoteApi = createJupiterApiClient({
       ...init,
       headers: {
         ...init?.headers,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
     });
   },
 });
 
-export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFetch, solBalance, tokenBalances }: any) => {
+export const SwapScreen = ({
+  t,
+  wallet,
+  tokenList,
+  notify,
+  connection,
+  onRetryFetch,
+  solBalance,
+  tokenBalances,
+}: any) => {
+  const [badMints, setBadMints] = useState<Set<string>>(new Set());
 
-  const [fromToken, setFromToken] = useState(
-    tokenList.find((t: any) => t.symbol === 'SOL') || tokenList[0] || {}
-  );
-  const [toToken, setToToken] = useState(
-    tokenList.find((t: any) => t.symbol === 'USDC') || tokenList[1] || {}
-  );
+  // bad mint ロード
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(BAD_MINTS_KEY);
+        const arr = raw ? (JSON.parse(raw) as string[]) : [];
+        setBadMints(new Set(arr.filter(Boolean)));
+      } catch {
+        setBadMints(new Set());
+      }
+    })();
+  }, []);
+
+  const markBadMint = useCallback(async (mint: string) => {
+    if (!mint) return;
+    setBadMints((prev) => {
+      if (prev.has(mint)) return prev;
+      const next = new Set(prev);
+      next.add(mint);
+
+      // 永続化（fire and forget）
+      AsyncStorage.setItem(BAD_MINTS_KEY, JSON.stringify(Array.from(next))).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  // ✅ 表示用トークンリスト（アイコン無し＆壊れmint除外）
+  const iconFilteredTokenList = useMemo(() => {
+    if (!Array.isArray(tokenList)) return [];
+    return tokenList.filter((tok: any) => {
+      const mint = tok.address || tok.mint;
+      const sym = tok.symbol;
+
+      // 主要は残す（最低限）
+      if (sym === 'SOL' || sym === 'USDC') return true;
+
+      if (!mint) return false;
+      if (badMints.has(mint)) return false;
+
+      return isValidLogo(tok.logoURI);
+    });
+  }, [tokenList, badMints]);
+
+  const [fromToken, setFromToken] = useState<any>({});
+  const [toToken, setToToken] = useState<any>({});
+
+  // 初期トークン選定（filtered から）
+  useEffect(() => {
+    if (iconFilteredTokenList.length > 2) {
+      const sol = iconFilteredTokenList.find((x: any) => x.symbol === 'SOL') || iconFilteredTokenList[0];
+      const usdc = iconFilteredTokenList.find((x: any) => x.symbol === 'USDC') || iconFilteredTokenList[1];
+      setFromToken((prev: any) => (prev?.address ? prev : sol));
+      setToToken((prev: any) => (prev?.address ? prev : usdc));
+    }
+  }, [iconFilteredTokenList]);
 
   const [amount, setAmount] = useState('');
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  
-  // ★ エラー用State
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSide, setModalSide] = useState<'from' | 'to'>('from');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // リスト初期化
-  useEffect(() => {
-    if (tokenList.length > 2) {
-      if (!fromToken.address || fromToken.symbol === 'RMYP') {
-        const sol = tokenList.find((t: any) => t.symbol === 'SOL');
-        if (sol) setFromToken(sol);
-      }
-      if (!toToken.address || toToken.symbol === 'KCAR') {
-        const usdc = tokenList.find((t: any) => t.symbol === 'USDC');
-        if (usdc) setToToken(usdc);
-      }
-    }
-  }, [tokenList.length]);
-
   const currentBalance = useMemo(() => {
-    if (fromToken.symbol === 'SOL') return solBalance || 0;
+    if (fromToken?.symbol === 'SOL') return solBalance || 0;
     const balances = tokenBalances || {};
-    return balances[fromToken.address] || 0;
+    return balances[fromToken?.address] || 0;
   }, [fromToken, solBalance, tokenBalances]);
 
-  // フィルタリング条件
   const filteredTokens = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     const balances = tokenBalances || {};
+    const list = iconFilteredTokenList;
 
     if (query) {
-      return tokenList.filter((t: any) => {
-        const symbol = (t.symbol || "").toLowerCase();
-        const name = (t.name || "").toLowerCase();
-        const addr = (t.address || "").toLowerCase();
-        return symbol.includes(query) || name.includes(query) || addr.includes(query);
-      }).slice(0, 100);
+      return list
+        .filter((x: any) => {
+          const symbol = (x.symbol || '').toLowerCase();
+          const name = (x.name || '').toLowerCase();
+          const addr = (x.address || '').toLowerCase();
+          return symbol.includes(query) || name.includes(query) || addr.includes(query);
+        })
+        .slice(0, 100);
     }
 
     if (modalSide === 'from') {
-      return tokenList.filter((t: any) => {
-        const bal = t.symbol === 'SOL' ? solBalance : (balances[t.address] || 0);
-        return bal > 0 || t.symbol === 'SOL' || t.symbol === 'USDC';
+      return list.filter((x: any) => {
+        const bal = x.symbol === 'SOL' ? solBalance : balances[x.address] || 0;
+        return bal > 0 || x.symbol === 'SOL' || x.symbol === 'USDC';
       });
-    } else {
-      return tokenList.slice(0, 100);
     }
-  }, [tokenList, searchQuery, tokenBalances, solBalance, modalSide]);
+
+    return list.slice(0, 100);
+  }, [iconFilteredTokenList, searchQuery, tokenBalances, solBalance, modalSide]);
 
   // Quote取得
   useEffect(() => {
@@ -113,6 +173,8 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
       setQuote(null);
       return;
     }
+    if (!fromToken?.address || !toToken?.address) return;
+
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
@@ -126,17 +188,21 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
           platformFeeBps: MY_PLATFORM_FEE_BPS,
         });
         setQuote(quoteResponse);
-      } catch (e: any) { setQuote(null); } finally { setLoading(false); }
+      } catch {
+        setQuote(null);
+      } finally {
+        setLoading(false);
+      }
     }, 600);
+
     return () => clearTimeout(timer);
   }, [amount, fromToken, toToken]);
 
-  // Swap実行
   const doSwap = async () => {
     if (!wallet || !quote || !connection) return;
     setLoading(true);
     try {
-      let feeAccountStr = null;
+      let feeAccountStr: string | null = null;
       if (MY_PLATFORM_FEE_BPS > 0 && MY_FEE_ACCOUNT) {
         try {
           const provider = new ReferralProvider(connection);
@@ -144,36 +210,47 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
           const mint = new PublicKey(toToken.address);
           const feeAccountPubKey = await provider.getReferralTokenAccountPubKey({ referralAccountPubKey, mint });
           feeAccountStr = feeAccountPubKey.toBase58();
-        } catch (err) { console.warn("[Swap] Fee Error:", err); }
+        } catch (err) {
+          console.warn('[Swap] Fee Error:', err);
+        }
       }
-      const requestParams = {
+
+      const requestParams: any = {
         quoteResponse: quote,
         userPublicKey: wallet.address,
         wrapAndUnwrapSol: true,
         ...(feeAccountStr ? { feeAccount: feeAccountStr } : {}),
         dynamicComputeUnitLimit: true,
       };
+
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: requestParams });
-      if (!swapResult?.swapTransaction) throw new Error("No transaction");
+      if (!swapResult?.swapTransaction) throw new Error('No transaction');
+
       const transaction = VersionedTransaction.deserialize(Buffer.from(swapResult.swapTransaction, 'base64'));
-      if (!wallet.secretKey) throw new Error("Wallet not loaded");
+      if (!wallet.secretKey) throw new Error('Wallet not loaded');
+
       transaction.sign([Keypair.fromSecretKey(wallet.secretKey)]);
       const txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true, maxRetries: 2 });
+
       notify(t('processing'));
       const confirmation = await connection.confirmTransaction(txid, 'confirmed');
-      if (confirmation.value.err) throw new Error("Tx Failed");
+      if (confirmation.value.err) throw new Error('Tx Failed');
+
       notify(t('swap_success_msg'));
       setShowSuccess(true);
       setAmount('');
       setQuote(null);
       if (onRetryFetch) onRetryFetch();
     } catch (e: any) {
-      // ★ Alert.alert を変更
       setAlert({ visible: true, title: t('swap_failed'), message: parseSolanaError(e, t) });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSwapPress = () => { if (quote) setShowConfirm(true); };
+  const handleSwapPress = () => {
+    if (quote) setShowConfirm(true);
+  };
 
   const displayOutAmount = useMemo(() => {
     if (!quote?.outAmount) return '0';
@@ -193,51 +270,110 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
       <Text style={localStyles.screenTitle}>{t('swap')}</Text>
 
       <ScrollView contentContainerStyle={localStyles.scrollContent}>
-        {/* Pay Card */}
         <View style={localStyles.card}>
           <View style={localStyles.cardHeader}>
             <Text style={localStyles.cardLabel}>{t('pay')}</Text>
-            <Text style={localStyles.balanceText}>{t('available')}: {Number(currentBalance).toLocaleString()}</Text>
+            <Text style={localStyles.balanceText}>
+              {t('available')}: {Number(currentBalance).toLocaleString()}
+            </Text>
           </View>
+
           <View style={localStyles.inputRow}>
-            <TextInput style={[localStyles.amountInput, { fontSize: amount.length > 10 ? 24 : 32, textAlign: 'right' }]} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
-            <TouchableOpacity style={localStyles.tokenSelectBtn} onPress={() => { setModalSide('from'); setModalVisible(true); }}>
-              <TokenIcon uri={fromToken.logoURI} symbol={fromToken.symbol} size={36} />
+            <TextInput
+              style={[localStyles.amountInput, { fontSize: amount.length > 10 ? 24 : 32, textAlign: 'right' }]}
+              placeholder="0"
+              placeholderTextColor="#555"
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+            />
+
+            <TouchableOpacity
+              style={localStyles.tokenSelectBtn}
+              onPress={() => {
+                setModalSide('from');
+                setModalVisible(true);
+              }}
+            >
+              <TokenIcon
+                uri={fromToken.logoURI}
+                symbol={fromToken.symbol}
+                mint={fromToken.address}
+                size={36}
+                onBadIcon={(mint) => markBadMint(mint)}
+              />
               <View style={{ marginLeft: 8, flex: 1 }}>
                 <Text style={localStyles.tokenSymbol}>{fromToken.symbol}</Text>
-                <Text style={localStyles.tokenAddress} numberOfLines={1}>{shortenAddress(fromToken.address)}</Text>
+                <Text style={localStyles.tokenAddress} numberOfLines={1}>
+                  {shortenAddress(fromToken.address)}
+                </Text>
               </View>
               <ArrowDown size={16} color="#aaa" />
             </TouchableOpacity>
           </View>
+
           <View style={localStyles.percentRow}>
             {[10, 50, 100].map((p) => (
-              <TouchableOpacity key={p} onPress={() => {
+              <TouchableOpacity
+                key={p}
+                onPress={() => {
                   let bal = Number(currentBalance);
                   let final = bal * (p / 100);
                   if (p === 100 && fromToken.symbol === 'SOL') final = Math.max(0, final - 0.01);
-                  setAmount(final.toFixed(6).replace(/\.?0+$/, ""));
-              }} style={localStyles.percentBtn}><Text style={localStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text></TouchableOpacity>
+                  setAmount(final.toFixed(6).replace(/\.?0+$/, ''));
+                }}
+                style={localStyles.percentBtn}
+              >
+                <Text style={localStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
 
         <View style={localStyles.switchContainer}>
-          <TouchableOpacity style={localStyles.switchBtn} onPress={handleSwitch}><ArrowDown size={24} color="#a855f7" /></TouchableOpacity>
+          <TouchableOpacity style={localStyles.switchBtn} onPress={handleSwitch}>
+            <ArrowDown size={24} color="#a855f7" />
+          </TouchableOpacity>
         </View>
 
-        {/* Receive Card */}
         <View style={[localStyles.card, { paddingTop: 24 }]}>
-          <View style={localStyles.cardHeader}><Text style={localStyles.cardLabel}>{t('receive_lbl')}</Text></View>
+          <View style={localStyles.cardHeader}>
+            <Text style={localStyles.cardLabel}>{t('receive_lbl')}</Text>
+          </View>
+
           <View style={localStyles.inputRow}>
-            {loading ? <ActivityIndicator color="#a855f7" style={{ marginLeft: 'auto', marginRight: 10 }} /> : (
-              <Text style={[localStyles.amountInput, { color: quote ? '#fff' : '#666', fontSize: displayOutAmount.length > 10 ? 24 : 32, textAlign: 'right' }]}>{displayOutAmount}</Text>
+            {loading ? (
+              <ActivityIndicator color="#a855f7" style={{ marginLeft: 'auto', marginRight: 10 }} />
+            ) : (
+              <Text
+                style={[
+                  localStyles.amountInput,
+                  { color: quote ? '#fff' : '#666', fontSize: displayOutAmount.length > 10 ? 24 : 32, textAlign: 'right' },
+                ]}
+              >
+                {displayOutAmount}
+              </Text>
             )}
-            <TouchableOpacity style={localStyles.tokenSelectBtn} onPress={() => { setModalSide('to'); setModalVisible(true); }}>
-              <TokenIcon uri={toToken.logoURI} symbol={toToken.symbol} size={36} />
+
+            <TouchableOpacity
+              style={localStyles.tokenSelectBtn}
+              onPress={() => {
+                setModalSide('to');
+                setModalVisible(true);
+              }}
+            >
+              <TokenIcon
+                uri={toToken.logoURI}
+                symbol={toToken.symbol}
+                mint={toToken.address}
+                size={36}
+                onBadIcon={(mint) => markBadMint(mint)}
+              />
               <View style={{ marginLeft: 8, flex: 1 }}>
                 <Text style={localStyles.tokenSymbol}>{toToken.symbol}</Text>
-                <Text style={localStyles.tokenAddress} numberOfLines={1}>{shortenAddress(toToken.address)}</Text>
+                <Text style={localStyles.tokenAddress} numberOfLines={1}>
+                  {shortenAddress(toToken.address)}
+                </Text>
               </View>
               <ArrowDown size={16} color="#aaa" />
             </TouchableOpacity>
@@ -245,55 +381,103 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         </View>
 
         <View style={localStyles.infoBox}>
-          <View style={localStyles.infoRow}><Text style={localStyles.infoLabel}>{t('route')}</Text><Text style={localStyles.infoValue}>Jupiter SDK</Text></View>
-          <View style={localStyles.infoRow}><Text style={localStyles.infoLabel}>{t('fee')}</Text><Text style={[localStyles.infoValue, { color: '#4ade80' }]}>0% {t('included')} ✨</Text></View>
+          <View style={localStyles.infoRow}>
+            <Text style={localStyles.infoLabel}>{t('route')}</Text>
+            <Text style={localStyles.infoValue}>Jupiter SDK</Text>
+          </View>
+          <View style={localStyles.infoRow}>
+            <Text style={localStyles.infoLabel}>{t('fee')}</Text>
+            <Text style={[localStyles.infoValue, { color: '#4ade80' }]}>0% {t('included')} ✨</Text>
+          </View>
         </View>
 
-        <TouchableOpacity style={[localStyles.swapBtn, (!quote || loading) && { backgroundColor: '#333' }]} disabled={!quote || loading} onPress={handleSwapPress}>
+        <TouchableOpacity
+          style={[localStyles.swapBtn, (!quote || loading) && { backgroundColor: '#333' }]}
+          disabled={!quote || loading}
+          onPress={handleSwapPress}
+        >
           <Text style={localStyles.swapBtnText}>{loading ? t('processing') : t('swap_btn')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Token Select Modal */}
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <View style={localStyles.modalContainer}>
           <View style={localStyles.modalHeader}>
             <Text style={localStyles.modalTitle}>{t('select')}</Text>
-            <TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}><X size={24} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setModalVisible(false);
+                setSearchQuery('');
+              }}
+            >
+              <X size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
-          
+
           <View style={localStyles.searchBar}>
             <Search size={20} color="#888" style={{ marginRight: 8 }} />
-            <TextInput style={localStyles.searchInput} placeholder="Search tokens..." placeholderTextColor="#888" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" />
+            <TextInput
+              style={localStyles.searchInput}
+              placeholder="Search tokens..."
+              placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+            />
           </View>
 
           <View style={localStyles.verifiedBanner}>
-             <Shield size={14} color="#3b82f6" style={{marginRight:6}} />
-             <Text style={localStyles.verifiedText}>{t('verified_tokens_desc')}</Text>
+            <Shield size={14} color="#3b82f6" style={{ marginRight: 6 }} />
+            <Text style={localStyles.verifiedText}>{t('verified_tokens_desc')}</Text>
           </View>
 
           <FlatList
             data={filteredTokens}
-            keyExtractor={(item) => item.address || item.symbol}
-            renderItem={({ item }) => {
+            keyExtractor={(item: any) => item.address || item.symbol}
+            renderItem={({ item }: any) => {
               const balances = tokenBalances || {};
-              const bal = item.symbol === 'SOL' ? solBalance : (balances[item.address] || 0);
+              const bal = item.symbol === 'SOL' ? solBalance : balances[item.address] || 0;
+
               return (
-                <TouchableOpacity style={localStyles.tokenItem} onPress={() => {
-                    if (modalSide === 'from') { setFromToken(item); setAmount(''); setQuote(null); }
-                    else { setToToken(item); }
-                    setModalVisible(false); setSearchQuery('');
-                }}>
-                  <TokenIcon uri={item.logoURI} symbol={item.symbol} size={40} />
+                <TouchableOpacity
+                  style={localStyles.tokenItem}
+                  onPress={() => {
+                    if (modalSide === 'from') {
+                      setFromToken(item);
+                      setAmount('');
+                      setQuote(null);
+                    } else {
+                      setToToken(item);
+                    }
+                    setModalVisible(false);
+                    setSearchQuery('');
+                  }}
+                >
+                  <TokenIcon
+                    uri={item.logoURI}
+                    symbol={item.symbol}
+                    mint={item.address}
+                    size={40}
+                    onBadIcon={(mint) => markBadMint(mint)}
+                  />
                   <View style={localStyles.tokenInfo}>
-                    <View style={{flexDirection:'row', alignItems:'center'}}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={localStyles.tokenSymbolLarge}>{item.symbol}</Text>
-                      <View style={{marginLeft: 6}}><BadgeCheck size={18} color="#3b82f6" fill="#1e1e1e" /></View>
+                      <View style={{ marginLeft: 6 }}>
+                        <BadgeCheck size={18} color="#3b82f6" fill="#1e1e1e" />
+                      </View>
                     </View>
-                    <Text style={localStyles.tokenName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={localStyles.tokenName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
                   </View>
+
                   {Number(bal) > 0 && (
-                    <View style={localStyles.tokenBalanceContainer}><Text style={localStyles.tokenBalanceText}>{Number(bal).toLocaleString(undefined, { maximumFractionDigits: 4 })}</Text></View>
+                    <View style={localStyles.tokenBalanceContainer}>
+                      <Text style={localStyles.tokenBalanceText}>
+                        {Number(bal).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -302,11 +486,22 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         </View>
       </Modal>
 
-      <ConfirmModal visible={showConfirm} title={t('confirm_swap_title')} message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`} cancelText={t('cancel')} confirmText={t('swap_btn')} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doSwap(); }} />
+      <ConfirmModal
+        visible={showConfirm}
+        title={t('confirm_swap_title')}
+        message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`}
+        cancelText={t('cancel')}
+        confirmText={t('swap_btn')}
+        onCancel={() => setShowConfirm(false)}
+        onConfirm={() => {
+          setShowConfirm(false);
+          doSwap();
+        }}
+      />
+
       <SuccessModal visible={showSuccess} message={t('swap_success_msg')} onDone={() => setShowSuccess(false)} />
-      
-      {/* ★ エラーモーダル配置 */}
-      <SimpleAlertModal 
+
+      <SimpleAlertModal
         visible={alert.visible}
         title={alert.title}
         message={alert.message}
