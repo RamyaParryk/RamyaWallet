@@ -3,7 +3,6 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 react {
- 
     autolinkLibrariesWithApp()
 }
 
@@ -20,8 +19,8 @@ android {
         applicationId "com.ratolab.ramyawallet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.1"
+        versionCode 6
+        versionName "1.1.1"
     }
     signingConfigs {
         debug {

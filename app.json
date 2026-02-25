@@ -1,4 +1,7 @@
 {
   "name": "RamyaWallet",
-  "displayName": "RamyaWallet"
+  "displayName": "RamyaWallet",
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-6891896770413839~2482537849"
+  }
 }

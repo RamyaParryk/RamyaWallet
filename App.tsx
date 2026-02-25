@@ -13,6 +13,9 @@ import 'text-encoding-polyfill';
 import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 
+// ✅ ここに SafeAreaProvider を追加
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
 
@@ -42,6 +45,9 @@ import {
 } from './src/screens/SettingsDetailScreens';
 
 import { ConfirmModal } from './src/components/ActionModals';
+
+// ✅ AdMob SDK init
+import mobileAds from 'react-native-google-mobile-ads';
 
 // ✅ Zustand Stores
 import { useUIStore } from './src/state/uiStore';
@@ -78,7 +84,6 @@ const NavButton = ({
   </TouchableOpacity>
 );
 
-/** 初回同期が終わるまで main を出さないための軽量ローダ */
 const BootLoading = ({ title = 'Loading...' }: { title?: string }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <ActivityIndicator />
@@ -87,9 +92,12 @@ const BootLoading = ({ title = 'Loading...' }: { title?: string }) => (
 );
 
 export default function App() {
-  // -------------------------
-  // UI store
-  // -------------------------
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .catch(() => {});
+  }, []);
+
   const currentScreen = useUIStore((s) => s.currentScreen);
   const setScreen = useUIStore((s) => s.setScreen);
 
@@ -103,9 +111,6 @@ export default function App() {
   const openLogoutConfirm = useUIStore((s) => s.openLogoutConfirm);
   const closeLogoutConfirm = useUIStore((s) => s.closeLogoutConfirm);
 
-  // -------------------------
-  // Settings store
-  // -------------------------
   const network = useSettingsStore((s) => s.network);
   const setNetwork = useSettingsStore((s) => s.setNetwork);
 
@@ -126,16 +131,10 @@ export default function App() {
 
   const resetAuth = useSettingsStore((s) => s.resetAuth);
 
-  // -------------------------
-  // Wallet store
-  // -------------------------
   const wallet = useWalletStore((s) => s.wallet);
   const setWallet = useWalletStore((s) => s.setWallet);
   const resetWallet = useWalletStore((s) => s.resetWallet);
 
-  // -------------------------
-  // Asset store
-  // -------------------------
   const assets = useAssetStore((s) => s.assets);
   const totalValue = useAssetStore((s) => s.totalValue);
 
@@ -148,47 +147,35 @@ export default function App() {
 
   const resetAssetAll = useAssetStore((s) => s.resetAll);
 
-  // -------------------------
-  // Contacts store
-  // -------------------------
   const contacts = useContactsStore((s) => s.contacts);
   const setContacts = useContactsStore((s) => s.setContacts);
   const resetContacts = useContactsStore((s) => s.resetContacts);
 
-  // -------------------------
-  // Connection store
-  // -------------------------
   const connection = useConnectionStore((s) => s.connection);
   const initConnection = useConnectionStore((s: any) => s.initFromSettings ?? s.init);
   const rebuildConnection = useConnectionStore((s: any) => s.rebuild);
 
   const t = useTranslation(lang);
 
-  // -------------------------
-  // Boot sync gate（ここが肝）
-  // -------------------------
   const [bootSyncDone, setBootSyncDone] = useState(false);
   const bootSyncStartedRef = useRef(false);
 
-  // screenがmainになるたびに「まだ同期してなければ」ローダを出したい
   useEffect(() => {
     if (currentScreen === 'main') {
-      // 既に同期済みならそのまま
-      // 未同期ならローダ状態に戻す
       if (!bootSyncDone) {
-        // noop（表示は render 側で切替）
       }
     }
-    // welcome/import/create などでは同期ゲート不要
-    if (currentScreen === 'welcome' || currentScreen === 'import' || currentScreen === 'loading' || currentScreen === 'create') {
+    if (
+      currentScreen === 'welcome' ||
+      currentScreen === 'import' ||
+      currentScreen === 'loading' ||
+      currentScreen === 'create'
+    ) {
       setBootSyncDone(true);
       bootSyncStartedRef.current = false;
     }
   }, [currentScreen, bootSyncDone]);
 
-  // -------------------------
-  // Android Back handling
-  // -------------------------
   useEffect(() => {
     const backAction = () => {
       const subScreens = [
@@ -217,14 +204,9 @@ export default function App() {
     return () => backHandler.remove();
   }, [currentScreen, setScreen]);
 
-  // -------------------------
-  // Token list: fast + background update
-  // -------------------------
   const fetchTokens = useCallback(async () => {
     try {
       const fast = await loadTokenListFast({ requireLogo: true });
-      console.log('[APP] tokenList fast:', fast.source, fast.tokens.length);
-
       setTokenList(fast.tokens);
 
       const map = new Map<string, any>();
@@ -236,8 +218,6 @@ export default function App() {
 
       const updated = await refreshTokenListInBackground({ requireLogo: true });
       if (updated?.tokens?.length) {
-        console.log('[APP] tokenList updated:', updated.source, updated.tokens.length);
-
         setTokenList(updated.tokens);
 
         const map2 = new Map<string, any>();
@@ -252,9 +232,6 @@ export default function App() {
     }
   }, [setTokenList, setTokenMap]);
 
-  // -------------------------
-  // Initialize
-  // -------------------------
   useEffect(() => {
     const initializeApp = async () => {
       await wait(400);
@@ -275,14 +252,12 @@ export default function App() {
         console.log('[APP] loadAll error:', e);
       }
 
-      console.log('[APP] 🚀 初期化プロセス: warmup...');
       try {
         await warmupNetwork();
       } catch {}
 
       await fetchTokens();
 
-      // Connection初期化（settings反映後）
       try {
         initConnection?.();
       } catch {}
@@ -291,7 +266,6 @@ export default function App() {
       const storedPin = useSettingsStore.getState().pin;
 
       if (hasWallet) {
-        // mainへ行く前に bootSyncDone を false にしてゲートを有効化
         setBootSyncDone(false);
         bootSyncStartedRef.current = false;
 
@@ -304,19 +278,12 @@ export default function App() {
     };
 
     initializeApp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTokens]);
 
-  // -------------------------
-  // Connection rebuild on network change
-  // -------------------------
   useEffect(() => {
     rebuildConnection?.({ network });
   }, [network, rebuildConnection]);
 
-  // -------------------------
-  // Save helpers
-  // -------------------------
   const persistSettings = useCallback(
     async (overrides?: Partial<{ pin: string | null; biometricsEnabled: boolean; network: any }>) => {
       const next = {
@@ -365,9 +332,6 @@ export default function App() {
     [setLang, setScreen]
   );
 
-  // -------------------------
-  // Logout
-  // -------------------------
   const handleLogout = useCallback(() => {
     openLogoutConfirm();
   }, [openLogoutConfirm]);
@@ -391,9 +355,6 @@ export default function App() {
     }
   }, [closeLogoutConfirm, resetAssetAll, resetAuth, resetContacts, resetWallet, setScreen]);
 
-  // -------------------------
-  // Refresh assets (service)
-  // -------------------------
   const refreshAssets = useCallback(async (force?: boolean) => {
     try {
       await refreshAssetsService({ force: !!force });
@@ -402,11 +363,6 @@ export default function App() {
     }
   }, []);
 
-  /**
-   * ✅ 「wallet && connection の成立タイミング」を逃さず、初回同期が終わるまで main を出さない
-   * - currentScreen が main の時だけ動作
-   * - unlock -> main 直後も確実に走る
-   */
   useEffect(() => {
     if (currentScreen !== 'main') return;
     if (bootSyncDone) return;
@@ -421,14 +377,10 @@ export default function App() {
 
       bootSyncStartedRef.current = true;
 
-      console.log('[APP] boot sync start');
       try {
         await refreshAssets(true);
-        console.log('[APP] boot sync done');
         setBootSyncDone(true);
       } catch (e) {
-        console.log('[APP] boot sync error', e);
-        // 失敗してももう一回走れるようにする
         bootSyncStartedRef.current = false;
       }
     };
@@ -439,9 +391,6 @@ export default function App() {
     return () => clearInterval(id);
   }, [currentScreen, bootSyncDone, refreshAssets]);
 
-  // -------------------------
-  // PIN set
-  // -------------------------
   const handlePinSet = useCallback(
     async (newPin: string) => {
       setPin(newPin);
@@ -469,9 +418,6 @@ export default function App() {
     ]
   );
 
-  // -------------------------
-  // Wallet import/create
-  // -------------------------
   const generateWalletFromMnemonic = useCallback(
     async (mnemonicInput: string) => {
       try {
@@ -494,7 +440,6 @@ export default function App() {
         await persistWallet(newWallet);
         await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
 
-        // ✅ mainへ入るので同期ゲートを有効化
         setBootSyncDone(false);
         bootSyncStartedRef.current = false;
 
@@ -544,20 +489,14 @@ export default function App() {
     }
   }, [setScreen, setWallet, showNotification, t]);
 
-  // -------------------------
-  // Render
-  // -------------------------
   const renderScreen = () => {
     switch (currentScreen) {
       case 'splash':
         return <SplashScreen />;
-
       case 'welcome':
         return <WelcomeScreen t={t} onStart={() => setScreen('loading')} onImport={() => setScreen('import')} />;
-
       case 'loading':
         return <LoadingScreen t={t} onFinish={createWallet} />;
-
       case 'create':
         return (
           <CreateWalletScreen
@@ -567,7 +506,6 @@ export default function App() {
               if (wallet) await persistWallet(wallet);
               await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
 
-              // ✅ mainへ入るので同期ゲートを有効化
               setBootSyncDone(false);
               bootSyncStartedRef.current = false;
 
@@ -575,10 +513,8 @@ export default function App() {
             }}
           />
         );
-
       case 'import':
         return <ImportWalletScreen t={t} onBack={() => setScreen('welcome')} onImport={generateWalletFromMnemonic} />;
-
       case 'unlock':
         return (
           <UnlockScreen
@@ -586,7 +522,6 @@ export default function App() {
             correctPin={pin}
             biometricsEnabled={biometricsEnabled}
             onUnlock={() => {
-              // ✅ unlock直後 mainで同期させる
               setBootSyncDone(false);
               bootSyncStartedRef.current = false;
               setScreen('main');
@@ -594,9 +529,7 @@ export default function App() {
             onLogout={handleLogout}
           />
         );
-
       case 'main':
-        // ✅ ここが「同期完了後にダッシュボード表示」
         if (!bootSyncDone) {
           return <BootLoading title={t('processing')} />;
         }
@@ -619,10 +552,8 @@ export default function App() {
             contacts={contacts}
           />
         );
-
       case 'receive':
         return <ReceiveScreen t={t} wallet={wallet} onBack={() => setScreen('main')} notify={showNotification} />;
-
       case 'send':
         return (
           <SendScreen
@@ -634,10 +565,8 @@ export default function App() {
             notify={showNotification}
           />
         );
-
       case 'history':
         return <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => setScreen('main')} />;
-
       case 'stake':
         return (
           <StakingScreen
@@ -649,7 +578,6 @@ export default function App() {
             solBalance={assets.find((a: any) => a.symbol === 'SOL')?.amount || 0}
           />
         );
-
       case 'settings_security':
         return (
           <SecuritySettingsScreen
@@ -668,7 +596,6 @@ export default function App() {
             onBack={() => setScreen('main')}
           />
         );
-
       case 'address_book':
         return (
           <AddressBookScreen
@@ -679,16 +606,12 @@ export default function App() {
             onBack={() => setScreen('main')}
           />
         );
-
       case 'settings_help':
         return <HelpScreen t={t} onBack={() => setScreen('main')} />;
-
       case 'settings_about':
         return <AboutScreen t={t} onBack={() => setScreen('main')} />;
-
       case 'settings_lang':
         return <LanguageScreen onBack={() => setScreen('main')} onChange={changeLanguage} currentLang={lang} />;
-
       case 'pin_setup':
         return (
           <PinSetupScreen
@@ -700,7 +623,6 @@ export default function App() {
             }}
           />
         );
-
       case 'settings_network':
         return (
           <NetworkSettingsScreen
@@ -715,34 +637,36 @@ export default function App() {
             onBack={() => setScreen('main')}
           />
         );
-
       default:
         return null;
     }
   };
 
+  // ✅ SafeAreaProvider でアプリ全体を包む
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2e1065" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#2e1065" />
 
-      {notification && (
-        <View style={styles.notification}>
-          <Text style={styles.notificationText}>{notification}</Text>
-        </View>
-      )}
+        {notification && (
+          <View style={styles.notification}>
+            <Text style={styles.notificationText}>{notification}</Text>
+          </View>
+        )}
 
-      {renderScreen()}
+        {renderScreen()}
 
-      <ConfirmModal
-        visible={logoutConfirm}
-        title={t('logout_confirm_title')}
-        message={t('logout_confirm_desc')}
-        cancelText={t('cancel')}
-        confirmText={t('delete')}
-        onCancel={closeLogoutConfirm}
-        onConfirm={executeLogout}
-      />
-    </SafeAreaView>
+        <ConfirmModal
+          visible={logoutConfirm}
+          title={t('logout_confirm_title')}
+          message={t('logout_confirm_desc')}
+          cancelText={t('cancel')}
+          confirmText={t('delete')}
+          onCancel={closeLogoutConfirm}
+          onConfirm={executeLogout}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -772,7 +696,14 @@ const MainScreen = ({
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
         {activeTab === 'home' && (
-          <DashboardScreen t={t} onNav={setActiveTab} onNavigate={onNavigate} wallet={wallet} assets={assets} {...props} />
+          <DashboardScreen
+            t={t}
+            onNav={setActiveTab}
+            onNavigate={onNavigate}
+            wallet={wallet}
+            assets={assets}
+            {...props}
+          />
         )}
 
         {activeTab === 'swap' && (

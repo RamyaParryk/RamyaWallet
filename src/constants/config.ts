@@ -2,7 +2,8 @@ import { PublicKey } from '@solana/web3.js';
 import { 
   JUPITER_API_KEY as JUP_ENV, 
   HELIUS_API_KEY as HELIUS_ENV,
-  REFERRAL_ACCOUNT_PUBKEY
+  REFERRAL_ACCOUNT_PUBKEY,
+  ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV,
 } from '@env';
 
 // API Keys
