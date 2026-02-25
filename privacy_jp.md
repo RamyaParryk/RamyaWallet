@@ -30,5 +30,5 @@ RamyaWalletは完全に非カストディアルかつ分散型のアプリケー
 
 ## 6. お問い合わせ窓口
 本プライバシーポリシーに関するご質問やご懸念がございましたら、以下の窓口までお問い合わせください。
-* **X (Twitter):** [@ramyaparryk](https://x.com/ramyaparryk)
-* **開発者:** RATO LAB (TomatoJuice)
+* **開発者:** RATO LAB
+* **Email:** ratolab@proton.me

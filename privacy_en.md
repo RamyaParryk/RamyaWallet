@@ -30,5 +30,5 @@ We may update our Privacy Policy from time to time. We will notify you of any ch
 
 ## 6. Contact Us
 If you have any questions, concerns, or suggestions regarding this Privacy Policy, please contact us at:
-* **X (Twitter):** [@ramyaparryk](https://x.com/ramyaparryk)
-* **Developer:** RATO LAB (TomatoJuice)
+* **Developer:** RATO LAB
+* **Email:** ratolab@proton.me
