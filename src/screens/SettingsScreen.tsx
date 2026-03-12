@@ -17,7 +17,7 @@ import {
   BannerAdSize,
 } from 'react-native-google-mobile-ads';
 
-import { styles } from '../styles/globalStyles';
+import { styles as globalStyles } from '../styles/globalStyles';
 
 import {
   Users,
@@ -42,31 +42,31 @@ type Props = {
 
 const BANNER_ESTIMATED_HEIGHT = 60;
 
+// ★ モダンなカード型の設定項目コンポーネント
 type SettingItemProps = {
   icon: any;
   title: string;
   desc?: string;
   onPress: () => void;
   danger?: boolean;
+  isLast?: boolean; // カードの最後の要素は下線を消すため
 };
 
-function SettingItem({ icon: Icon, title, desc, onPress, danger }: SettingItemProps) {
+function SettingItem({ icon: Icon, title, desc, onPress, danger, isLast = false }: SettingItemProps) {
   return (
     <TouchableOpacity
-      style={[styles.settingItem, danger ? s.dangerItem : null]}
+      style={[localStyles.settingItem, !isLast && localStyles.borderBottom]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.settingIcon, danger ? s.dangerIcon : s.normalIcon]}>
-        <Icon size={20} color={danger ? '#ef4444' : '#fff'} />
+      <View style={[localStyles.iconWrapper, danger && { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+        <Icon size={22} color={danger ? '#ef4444' : '#a855f7'} />
       </View>
-
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.settingText, danger ? s.dangerText : null]}>{title}</Text>
-        {desc ? <Text style={styles.descTextSmall}>{desc}</Text> : null}
+      <View style={localStyles.textContainer}>
+        <Text style={[localStyles.title, danger && { color: '#ef4444' }]}>{title}</Text>
+        {desc ? <Text style={localStyles.subtitle}>{desc}</Text> : null}
       </View>
-
-      {!danger ? <ChevronRight size={20} color="#444" /> : null}
+      <ChevronRight size={20} color="#555" />
     </TouchableOpacity>
   );
 }
@@ -87,53 +87,63 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
 
   return (
     // ✅ top を外して背景をステータスバー下まで（Edge-to-Edge）
-    <SafeAreaView style={s.root} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={localStyles.root} edges={['left', 'right', 'bottom']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <View style={s.container}>
+      <View style={localStyles.container}>
         <ScrollView
-          style={styles.content}
+          style={globalStyles.content}
           contentContainerStyle={[
-            s.scrollContent,
+            localStyles.scrollContent,
             {
               paddingTop: insets.top + 16,
-              paddingBottom: insets.bottom + (showBanner ? BANNER_ESTIMATED_HEIGHT + 24 : 24),
+              paddingBottom: insets.bottom + (showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 40),
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.screenTitle}>{t('settings')}</Text>
+          <Text style={localStyles.screenTitle}>{t('settings')}</Text>
 
-          <Text style={styles.sectionHeader}>{t('general')}</Text>
+          {/* --- General Section --- */}
+          <Text style={localStyles.sectionHeader}>{t('general')}</Text>
+          <View style={localStyles.card}>
+            <SettingItem icon={Users} title={t('address_book')} onPress={() => onNavigate('address_book')} />
+            <SettingItem icon={Globe} title={t('language')} onPress={() => onNavigate('settings_lang')} isLast={true} />
+          </View>
 
-          <SettingItem icon={Users} title={t('address_book')} onPress={() => onNavigate('address_book')} />
-          <SettingItem icon={ShieldCheck} title={t('security')} onPress={() => onNavigate('settings_security')} />
-          <SettingItem icon={Server} title={t('network')} onPress={() => onNavigate('settings_network')} />
-          <SettingItem icon={Globe} title={t('language')} onPress={() => onNavigate('settings_lang')} />
+          {/* --- Security & Network Section --- */}
+          <Text style={localStyles.sectionHeader}>{t('security_network') || 'Security & Network'}</Text>
+          <View style={localStyles.card}>
+            <SettingItem icon={ShieldCheck} title={t('security')} onPress={() => onNavigate('settings_security')} />
+            <SettingItem icon={Server} title={t('network')} onPress={() => onNavigate('settings_network')} isLast={true} />
+          </View>
 
-          <Text style={styles.sectionHeader}>{t('support')}</Text>
+          {/* --- Support Section --- */}
+          <Text style={localStyles.sectionHeader}>{t('support')}</Text>
+          <View style={localStyles.card}>
+            <SettingItem icon={CircleHelp} title={t('help')} onPress={() => onNavigate('settings_help')} />
+            <SettingItem icon={Info} title={t('about')} onPress={() => onNavigate('settings_about')} isLast={true} />
+          </View>
 
-          <SettingItem icon={CircleHelp} title={t('help')} onPress={() => onNavigate('settings_help')} />
-          <SettingItem icon={Info} title={t('about')} onPress={() => onNavigate('settings_about')} />
+          {/* --- Danger Zone --- */}
+          <Text style={[localStyles.sectionHeader, { color: '#ef4444', marginTop: 30 }]}>Danger Zone</Text>
+          <View style={[localStyles.card, { borderColor: 'rgba(239, 68, 68, 0.3)', marginBottom: 20 }]}>
+            <SettingItem 
+              icon={LogOut} 
+              title={t('logout')} 
+              desc={t('logout_desc') || 'Erase all data from this device'}
+              onPress={onLogout} 
+              danger={true} 
+              isLast={true} 
+            />
+          </View>
 
-          {/* ログアウト */}
-          <TouchableOpacity
-            style={[styles.settingItem, { marginTop: 20 }]}
-            onPress={onLogout}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.settingIcon, s.dangerIcon]}>
-              <LogOut size={20} color="#ef4444" />
-            </View>
-            <Text style={[styles.settingText, s.dangerText]}>{t('logout')}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.versionText}>Version {packageJson.version}</Text>
+          <Text style={localStyles.versionText}>Version {packageJson.version}</Text>
         </ScrollView>
 
         {/* ✅ 画面下固定バナー（Androidのみ） */}
         {showBanner ? (
-          <View style={[s.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
             <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
           </View>
         ) : null}
@@ -142,12 +152,79 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1 },
+// ★ モダンUI専用のスタイル
+const localStyles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#000' },
   container: { flex: 1 },
-
-  scrollContent: {},
-
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingTop: 10,
+  },
+  sectionHeader: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 12,
+    marginTop: 24,
+    letterSpacing: 1,
+  },
+  card: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+    overflow: 'hidden',
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#1a1a1a',
+  },
+  borderBottom: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  subtitle: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  versionText: {
+    color: '#555',
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 20,
+    marginBottom: 20,
+  },
   bannerContainer: {
     position: 'absolute',
     left: 0,
@@ -156,11 +233,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)', // バナーの背景を少し暗くして馴染ませる
   },
-
-  normalIcon: { backgroundColor: '#222' },
-
-  dangerItem: {},
-  dangerIcon: { backgroundColor: '#3f0f0f' },
-  dangerText: { color: '#ef4444' },
 });

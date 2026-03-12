@@ -23,6 +23,9 @@ import { parseSolanaError } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 
+// ★ 追加: どこからでも資産を更新できるサービスをインポート
+import { refreshAssetsService } from '../services/refreshAssets';
+
 const BAD_MINTS_KEY = 'ramya_bad_icon_mints_v1';
 
 const shortenAddress = (address: string, chars = 4) => {
@@ -37,7 +40,6 @@ function isValidLogo(uri?: string) {
   const lower = s.toLowerCase();
   if (lower.endsWith('.svg')) return false;
   if (lower.startsWith('data:image/svg')) return false;
-  // ipfs:// は TokenIcon で変換できるが「消したい」ならここで落とす
   if (lower.startsWith('ipfs://')) return false;
   return true;
 }
@@ -68,7 +70,6 @@ export const SwapScreen = ({
 }: any) => {
   const [badMints, setBadMints] = useState<Set<string>>(new Set());
 
-  // bad mint ロード
   useEffect(() => {
     (async () => {
       try {
@@ -87,26 +88,19 @@ export const SwapScreen = ({
       if (prev.has(mint)) return prev;
       const next = new Set(prev);
       next.add(mint);
-
-      // 永続化（fire and forget）
       AsyncStorage.setItem(BAD_MINTS_KEY, JSON.stringify(Array.from(next))).catch(() => {});
       return next;
     });
   }, []);
 
-  // ✅ 表示用トークンリスト（アイコン無し＆壊れmint除外）
   const iconFilteredTokenList = useMemo(() => {
     if (!Array.isArray(tokenList)) return [];
     return tokenList.filter((tok: any) => {
       const mint = tok.address || tok.mint;
       const sym = tok.symbol;
-
-      // 主要は残す（最低限）
       if (sym === 'SOL' || sym === 'USDC') return true;
-
       if (!mint) return false;
       if (badMints.has(mint)) return false;
-
       return isValidLogo(tok.logoURI);
     });
   }, [tokenList, badMints]);
@@ -114,7 +108,6 @@ export const SwapScreen = ({
   const [fromToken, setFromToken] = useState<any>({});
   const [toToken, setToToken] = useState<any>({});
 
-  // 初期トークン選定（filtered から）
   useEffect(() => {
     if (iconFilteredTokenList.length > 2) {
       const sol = iconFilteredTokenList.find((x: any) => x.symbol === 'SOL') || iconFilteredTokenList[0];
@@ -167,7 +160,6 @@ export const SwapScreen = ({
     return list.slice(0, 100);
   }, [iconFilteredTokenList, searchQuery, tokenBalances, solBalance, modalSide]);
 
-  // Quote取得
   useEffect(() => {
     if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) {
       setQuote(null);
@@ -241,6 +233,10 @@ export const SwapScreen = ({
       setAmount('');
       setQuote(null);
       if (onRetryFetch) onRetryFetch();
+
+      // ★ ここが重要！スワップ成功後に自動で残高をバックグラウンド更新する
+      refreshAssetsService({ force: true });
+
     } catch (e: any) {
       setAlert({ visible: true, title: t('swap_failed'), message: parseSolanaError(e, t) });
     } finally {

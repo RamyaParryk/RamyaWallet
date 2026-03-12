@@ -5,4 +5,5 @@ declare module '@env' {
   export const REFERRAL_ACCOUNT_PUBKEY: string;
   export const ADMOB_ANDROID_BANNER_ID: string;
   export const ADMOB_ANDROID_APP_ID: string;
+  export const COIN_GENKO_API_KEY: string;
 }

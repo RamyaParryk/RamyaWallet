@@ -290,7 +290,7 @@ export async function refreshTokenListInBackground(
 
   try {
     const res = await fetch(JUPITER_TOKENS_V2_VERIFIED, {
-      headers: { Accept: 'application/json', 'x-api-key': JUPITER_API_KEY },
+      headers: { Accept: 'application/json', 'x-api-key': JUPITER_API_KEY,'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
     });
 
     if (!res.ok) {

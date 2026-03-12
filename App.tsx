@@ -4,7 +4,8 @@ import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator } from 'react-native';
+// ★ 修正: SafeAreaView をここから削除しました（非推奨警告の原因）
+import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
 import { Keypair } from '@solana/web3.js';
@@ -13,11 +14,13 @@ import 'text-encoding-polyfill';
 import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 
-// ✅ ここに SafeAreaProvider を追加
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+// ★ 修正: 新しい SafeAreaView をこちらからインポートしています
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
+// ★ 本物のSOLのアドレスをインポート
+import { SOL_MINT } from './src/constants/config';
 
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -45,11 +48,8 @@ import {
 } from './src/screens/SettingsDetailScreens';
 
 import { ConfirmModal } from './src/components/ActionModals';
-
-// ✅ AdMob SDK init
 import mobileAds from 'react-native-google-mobile-ads';
 
-// ✅ Zustand Stores
 import { useUIStore } from './src/state/uiStore';
 import { useSettingsStore } from './src/state/settingsStore';
 import { useWalletStore } from './src/state/walletStore';
@@ -57,13 +57,8 @@ import { useAssetStore } from './src/state/assetStore';
 import { useContactsStore } from './src/state/contactsStore';
 import { useConnectionStore } from './src/state/connectionStore';
 
-// ✅ token list cache
 import { loadTokenListFast, refreshTokenListInBackground } from './src/services/tokenListCache';
-
-// ✅ Storage facade
 import * as secureStorage from './src/storage/secureStorage';
-
-// ✅ Services
 import { refreshAssetsService } from './src/services/refreshAssets';
 import { warmupNetwork } from './src/services/jupiterService';
 
@@ -86,49 +81,38 @@ const NavButton = ({
 
 const BootLoading = ({ title = 'Loading...' }: { title?: string }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator />
+    <ActivityIndicator color="#a855f7" />
     <Text style={{ marginTop: 12, color: '#aaa' }}>{title}</Text>
   </View>
 );
 
 export default function App() {
   useEffect(() => {
-    mobileAds()
-      .initialize()
-      .catch(() => {});
+    mobileAds().initialize().catch(() => {});
   }, []);
 
   const currentScreen = useUIStore((s) => s.currentScreen);
   const setScreen = useUIStore((s) => s.setScreen);
-
   const activeTab = useUIStore((s) => s.activeTab);
   const setTab = useUIStore((s) => s.setTab);
-
   const notification = useUIStore((s) => s.notification);
   const showNotification = useUIStore((s) => s.showNotification);
-
   const logoutConfirm = useUIStore((s) => s.logoutConfirm);
   const openLogoutConfirm = useUIStore((s) => s.openLogoutConfirm);
   const closeLogoutConfirm = useUIStore((s) => s.closeLogoutConfirm);
 
   const network = useSettingsStore((s) => s.network);
   const setNetwork = useSettingsStore((s) => s.setNetwork);
-
   const rpcEndpoint = useSettingsStore((s) => s.rpcEndpoint);
   const setRpcEndpoint = useSettingsStore((s) => s.setRpcEndpoint);
-
   const biometricsEnabled = useSettingsStore((s) => s.biometricsEnabled);
   const setBiometricsEnabled = useSettingsStore((s) => s.setBiometricsEnabled);
-
   const pin = useSettingsStore((s) => s.pin);
   const setPin = useSettingsStore((s) => s.setPin);
-
   const pendingBioEnable = useSettingsStore((s) => s.pendingBioEnable);
   const setPendingBioEnable = useSettingsStore((s) => s.setPendingBioEnable);
-
   const lang = useSettingsStore((s) => s.lang);
   const setLang = useSettingsStore((s) => s.setLang);
-
   const resetAuth = useSettingsStore((s) => s.resetAuth);
 
   const wallet = useWalletStore((s) => s.wallet);
@@ -137,14 +121,11 @@ export default function App() {
 
   const assets = useAssetStore((s) => s.assets);
   const totalValue = useAssetStore((s) => s.totalValue);
-
   const setAssets = useAssetStore((s: any) => s.setAssets);
   const setTotalValue = useAssetStore((s: any) => s.setTotalValue);
-
   const setTokenMap = useAssetStore((s: any) => s.setTokenMap);
   const tokenList = useAssetStore((s) => s.tokenList);
   const setTokenList = useAssetStore((s: any) => s.setTokenList);
-
   const resetAssetAll = useAssetStore((s) => s.resetAll);
 
   const contacts = useContactsStore((s) => s.contacts);
@@ -156,42 +137,19 @@ export default function App() {
   const rebuildConnection = useConnectionStore((s: any) => s.rebuild);
 
   const t = useTranslation(lang);
-
   const [bootSyncDone, setBootSyncDone] = useState(false);
   const bootSyncStartedRef = useRef(false);
 
   useEffect(() => {
-    if (currentScreen === 'main') {
-      if (!bootSyncDone) {
-      }
-    }
-    if (
-      currentScreen === 'welcome' ||
-      currentScreen === 'import' ||
-      currentScreen === 'loading' ||
-      currentScreen === 'create'
-    ) {
+    if (currentScreen === 'welcome' || currentScreen === 'import' || currentScreen === 'loading' || currentScreen === 'create') {
       setBootSyncDone(true);
       bootSyncStartedRef.current = false;
     }
-  }, [currentScreen, bootSyncDone]);
+  }, [currentScreen]);
 
   useEffect(() => {
     const backAction = () => {
-      const subScreens = [
-        'settings_security',
-        'settings_network',
-        'settings_help',
-        'settings_about',
-        'settings_lang',
-        'pin_setup',
-        'import',
-        'address_book',
-        'stake',
-        'receive',
-        'send',
-      ];
-
+      const subScreens = ['settings_security', 'settings_network', 'settings_help', 'settings_about', 'settings_lang', 'pin_setup', 'import', 'address_book', 'stake', 'receive', 'send'];
       if ((currentScreen as string).startsWith('settings_') || subScreens.includes(currentScreen as any)) {
         if (currentScreen === 'import') setScreen('welcome');
         else setScreen('main');
@@ -199,35 +157,33 @@ export default function App() {
       }
       return false;
     };
-
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
   }, [currentScreen, setScreen]);
 
   const fetchTokens = useCallback(async () => {
     try {
+      // 1. まずはキャッシュやローカルから「一瞬で」読み込んでセットする
       const fast = await loadTokenListFast({ requireLogo: true });
       setTokenList(fast.tokens);
-
       const map = new Map<string, any>();
-      fast.tokens.forEach((tok: any) => {
-        const key = tok.address || tok.mint;
-        if (key) map.set(key, tok);
-      });
+      fast.tokens.forEach((tok: any) => { if (tok.address || tok.mint) map.set(tok.address || tok.mint, tok); });
       setTokenMap(map);
 
-      const updated = await refreshTokenListInBackground({ requireLogo: true });
-      if (updated?.tokens?.length) {
-        setTokenList(updated.tokens);
+      // 2. ネットからの最新データ取得は「await せずに」裏で走らせる（起動をブロックしない）
+      refreshTokenListInBackground({ requireLogo: true })
+        .then((updated) => {
+          if (updated?.tokens?.length) {
+            setTokenList(updated.tokens);
+            const map2 = new Map<string, any>();
+            updated.tokens.forEach((tok: any) => { if (tok.address || tok.mint) map2.set(tok.address || tok.mint, tok); });
+            setTokenMap(map2);
+            console.log("[APP] 🔄 バックグラウンドで最新トークンリストの更新完了");
+          }
+        })
+        .catch(e => console.log("[APP] バックグラウンド更新エラー", e));
 
-        const map2 = new Map<string, any>();
-        updated.tokens.forEach((tok: any) => {
-          const key = tok.address || tok.mint;
-          if (key) map2.set(key, tok);
-        });
-        setTokenMap(map2);
-      }
-    } catch (e) {
+    } catch (e) { 
       console.log('[APP] fetchTokens error:', e);
     }
   }, [setTokenList, setTokenMap]);
@@ -235,40 +191,26 @@ export default function App() {
   useEffect(() => {
     const initializeApp = async () => {
       await wait(400);
-
       try {
         const { settings, contacts, language, wallet } = await secureStorage.loadAll();
-
         if (contacts) setContacts(contacts);
         if (language) setLang(language);
         if (wallet) setWallet(wallet);
-
         if (settings) {
           if (typeof settings.pin !== 'undefined') setPin(settings.pin ?? null);
           if (typeof settings.biometricsEnabled !== 'undefined') setBiometricsEnabled(!!settings.biometricsEnabled);
           if (settings.network) setNetwork(settings.network as any);
         }
-      } catch (e) {
-        console.log('[APP] loadAll error:', e);
-      }
-
-      try {
-        await warmupNetwork();
-      } catch {}
-
+      } catch (e) { }
+      try { await warmupNetwork(); } catch {}
       await fetchTokens();
-
-      try {
-        initConnection?.();
-      } catch {}
+      try { initConnection?.(); } catch {}
 
       const hasWallet = !!useWalletStore.getState().wallet;
       const storedPin = useSettingsStore.getState().pin;
-
       if (hasWallet) {
         setBootSyncDone(false);
         bootSyncStartedRef.current = false;
-
         if (storedPin) setScreen('unlock');
         else setScreen('main');
       } else {
@@ -276,456 +218,146 @@ export default function App() {
         setScreen('welcome');
       }
     };
-
     initializeApp();
   }, [fetchTokens]);
 
-  useEffect(() => {
-    rebuildConnection?.({ network });
-  }, [network, rebuildConnection]);
+  useEffect(() => { rebuildConnection?.({ network }); }, [network, rebuildConnection]);
 
-  const persistSettings = useCallback(
-    async (overrides?: Partial<{ pin: string | null; biometricsEnabled: boolean; network: any }>) => {
-      const next = {
-        pin: overrides?.pin ?? useSettingsStore.getState().pin,
-        biometricsEnabled:
-          typeof overrides?.biometricsEnabled === 'boolean'
-            ? overrides!.biometricsEnabled
-            : useSettingsStore.getState().biometricsEnabled,
-        network: overrides?.network ?? useSettingsStore.getState().network,
-      };
-      try {
-        await secureStorage.saveSettings(next as any);
-      } catch (e) {
-        console.log('[APP] saveSettings error:', e);
-      }
-    },
-    []
-  );
-
-  const persistWallet = useCallback(async (w: any) => {
-    try {
-      await secureStorage.saveWallet(w);
-    } catch (e) {
-      console.log('[APP] saveWallet error:', e);
-    }
+  const persistSettings = useCallback(async (overrides?: Partial<{ pin: string | null; biometricsEnabled: boolean; network: any }>) => {
+    const next = {
+      pin: overrides?.pin ?? useSettingsStore.getState().pin,
+      biometricsEnabled: typeof overrides?.biometricsEnabled === 'boolean' ? overrides!.biometricsEnabled : useSettingsStore.getState().biometricsEnabled,
+      network: overrides?.network ?? useSettingsStore.getState().network,
+    };
+    try { await secureStorage.saveSettings(next as any); } catch (e) {}
   }, []);
 
-  const saveContacts = useCallback(
-    async (newContacts: any[]) => {
-      setContacts(newContacts);
-      try {
-        await secureStorage.saveContacts(newContacts);
-      } catch {}
-    },
-    [setContacts]
-  );
-
-  const changeLanguage = useCallback(
-    async (newLang: string) => {
-      setLang(newLang);
-      try {
-        await secureStorage.saveLanguage(newLang);
-      } catch {}
-      setScreen('main');
-    },
-    [setLang, setScreen]
-  );
-
-  const handleLogout = useCallback(() => {
-    openLogoutConfirm();
-  }, [openLogoutConfirm]);
+  const persistWallet = useCallback(async (w: any) => { try { await secureStorage.saveWallet(w); } catch (e) {} }, []);
+  const saveContacts = useCallback(async (newContacts: any[]) => { setContacts(newContacts); try { await secureStorage.saveContacts(newContacts); } catch {} }, [setContacts]);
+  const changeLanguage = useCallback(async (newLang: string) => { setLang(newLang); try { await secureStorage.saveLanguage(newLang); } catch {} setScreen('main'); }, [setLang, setScreen]);
+  const handleLogout = useCallback(() => { openLogoutConfirm(); }, [openLogoutConfirm]);
 
   const executeLogout = useCallback(async () => {
     try {
       await secureStorage.clearWalletAndSettings();
-
-      resetWallet();
-      resetAuth();
-      resetContacts();
-      resetAssetAll();
-
-      setBootSyncDone(true);
-      bootSyncStartedRef.current = false;
-
-      setScreen('welcome');
-      closeLogoutConfirm();
-    } catch (e) {
-      console.log('[APP] logout error:', e);
-    }
+      resetWallet(); resetAuth(); resetContacts(); resetAssetAll();
+      setBootSyncDone(true); bootSyncStartedRef.current = false;
+      setScreen('welcome'); closeLogoutConfirm();
+    } catch (e) {}
   }, [closeLogoutConfirm, resetAssetAll, resetAuth, resetContacts, resetWallet, setScreen]);
 
   const refreshAssets = useCallback(async (force?: boolean) => {
-    try {
-      await refreshAssetsService({ force: !!force });
-    } catch (e) {
-      console.error('[REFRESH] エラー:', e);
-    }
+    try { await refreshAssetsService({ force: !!force }); } catch (e) {}
   }, []);
 
   useEffect(() => {
     if (currentScreen !== 'main') return;
     if (bootSyncDone) return;
-
     const tick = async () => {
       if (bootSyncStartedRef.current) return;
-
       const w = useWalletStore.getState().wallet;
       const c = useConnectionStore.getState().connection;
-
       if (!w || !c) return;
-
       bootSyncStartedRef.current = true;
-
       try {
         await refreshAssets(true);
         setBootSyncDone(true);
-      } catch (e) {
-        bootSyncStartedRef.current = false;
-      }
+      } catch (e) { bootSyncStartedRef.current = false; }
     };
-
     const id = setInterval(tick, 350);
     tick();
-
     return () => clearInterval(id);
   }, [currentScreen, bootSyncDone, refreshAssets]);
 
-  const handlePinSet = useCallback(
-    async (newPin: string) => {
-      setPin(newPin);
-      await persistSettings({ pin: newPin });
-      showNotification(t('pin_setup'));
+  const handlePinSet = useCallback(async (newPin: string) => {
+    setPin(newPin); await persistSettings({ pin: newPin }); showNotification(t('pin_setup'));
+    if (pendingBioEnable) { setBiometricsEnabled(true); setPendingBioEnable(false); await persistSettings({ pin: newPin, biometricsEnabled: true }); showNotification(t('biometrics') + ' ON'); }
+    setScreen('settings_security');
+  }, [pendingBioEnable, persistSettings, setBiometricsEnabled, setPendingBioEnable, setPin, setScreen, showNotification, t]);
 
-      if (pendingBioEnable) {
-        setBiometricsEnabled(true);
-        setPendingBioEnable(false);
-        await persistSettings({ pin: newPin, biometricsEnabled: true });
-        showNotification(t('biometrics') + ' ON');
-      }
-
-      setScreen('settings_security');
-    },
-    [
-      pendingBioEnable,
-      persistSettings,
-      setBiometricsEnabled,
-      setPendingBioEnable,
-      setPin,
-      setScreen,
-      showNotification,
-      t,
-    ]
-  );
-
-  const generateWalletFromMnemonic = useCallback(
-    async (mnemonicInput: string) => {
-      try {
-        const seed = mnemonicToSeedSync(mnemonicInput);
-        const path = "m/44'/501'/0'/0'";
-        const derivedSeed = derivePath(path, seed.toString('hex')).key;
-        const keypair = Keypair.fromSeed(derivedSeed);
-
-        const newWallet = {
-          address: keypair.publicKey.toBase58(),
-          secretKey: keypair.secretKey,
-          mnemonic: mnemonicInput,
-        };
-
-        setWallet(newWallet as any);
-        setPin(null);
-        setBiometricsEnabled(false);
-        setPendingBioEnable(false);
-
-        await persistWallet(newWallet);
-        await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
-
-        setBootSyncDone(false);
-        bootSyncStartedRef.current = false;
-
-        setScreen('main');
-        showNotification(t('wallet_restored'));
-        return true;
-      } catch (e) {
-        console.error(e);
-        showNotification(t('error'));
-        return false;
-      }
-    },
-    [
-      persistSettings,
-      persistWallet,
-      setBiometricsEnabled,
-      setPendingBioEnable,
-      setPin,
-      setScreen,
-      setWallet,
-      showNotification,
-      t,
-    ]
-  );
+  const generateWalletFromMnemonic = useCallback(async (mnemonicInput: string) => {
+    try {
+      const seed = mnemonicToSeedSync(mnemonicInput);
+      const path = "m/44'/501'/0'/0'";
+      const derivedSeed = derivePath(path, seed.toString('hex')).key;
+      const keypair = Keypair.fromSeed(derivedSeed);
+      const newWallet = { address: keypair.publicKey.toBase58(), secretKey: keypair.secretKey, mnemonic: mnemonicInput };
+      setWallet(newWallet as any); setPin(null); setBiometricsEnabled(false); setPendingBioEnable(false);
+      await persistWallet(newWallet); await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
+      setBootSyncDone(false); bootSyncStartedRef.current = false;
+      setScreen('main'); showNotification(t('wallet_restored')); return true;
+    } catch (e) { showNotification(t('error')); return false; }
+  }, [persistSettings, persistWallet, setBiometricsEnabled, setPendingBioEnable, setPin, setScreen, setWallet, showNotification, t]);
 
   const createWallet = useCallback(async () => {
     await wait(300);
-
     try {
       const mnemonic = generateMnemonic(128);
       const seed = mnemonicToSeedSync(mnemonic);
       const path = "m/44'/501'/0'/0'";
       const derivedSeed = derivePath(path, seed.toString('hex')).key;
       const keypair = Keypair.fromSeed(derivedSeed);
-
-      const newWallet = {
-        address: keypair.publicKey.toBase58(),
-        secretKey: keypair.secretKey,
-        mnemonic,
-      };
-
-      setWallet(newWallet as any);
-      setScreen('create');
-    } catch (e) {
-      showNotification(t('create_error'));
-      setScreen('welcome');
-    }
+      const newWallet = { address: keypair.publicKey.toBase58(), secretKey: keypair.secretKey, mnemonic };
+      setWallet(newWallet as any); setScreen('create');
+    } catch (e) { showNotification(t('create_error')); setScreen('welcome'); }
   }, [setScreen, setWallet, showNotification, t]);
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'splash':
-        return <SplashScreen />;
-      case 'welcome':
-        return <WelcomeScreen t={t} onStart={() => setScreen('loading')} onImport={() => setScreen('import')} />;
-      case 'loading':
-        return <LoadingScreen t={t} onFinish={createWallet} />;
-      case 'create':
-        return (
-          <CreateWalletScreen
-            t={t}
-            wallet={wallet}
-            onConfirm={async () => {
-              if (wallet) await persistWallet(wallet);
-              await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
-
-              setBootSyncDone(false);
-              bootSyncStartedRef.current = false;
-
-              setScreen('main');
-            }}
-          />
-        );
-      case 'import':
-        return <ImportWalletScreen t={t} onBack={() => setScreen('welcome')} onImport={generateWalletFromMnemonic} />;
-      case 'unlock':
-        return (
-          <UnlockScreen
-            t={t}
-            correctPin={pin}
-            biometricsEnabled={biometricsEnabled}
-            onUnlock={() => {
-              setBootSyncDone(false);
-              bootSyncStartedRef.current = false;
-              setScreen('main');
-            }}
-            onLogout={handleLogout}
-          />
-        );
+      case 'splash': return <SplashScreen />;
+      case 'welcome': return <WelcomeScreen t={t} onStart={() => setScreen('loading')} onImport={() => setScreen('import')} />;
+      case 'loading': return <LoadingScreen t={t} onFinish={createWallet} />;
+      case 'create': return <CreateWalletScreen t={t} wallet={wallet} onConfirm={async () => { if (wallet) await persistWallet(wallet); await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' }); setBootSyncDone(false); bootSyncStartedRef.current = false; setScreen('main'); }} />;
+      case 'import': return <ImportWalletScreen t={t} onBack={() => setScreen('welcome')} onImport={generateWalletFromMnemonic} />;
+      case 'unlock': return <UnlockScreen t={t} correctPin={pin} biometricsEnabled={biometricsEnabled} onUnlock={() => { setBootSyncDone(false); bootSyncStartedRef.current = false; setScreen('main'); }} onLogout={handleLogout} />;
       case 'main':
-        if (!bootSyncDone) {
-          return <BootLoading title={t('processing')} />;
-        }
-        return (
-          <MainScreen
-            t={t}
-            activeTab={activeTab}
-            setActiveTab={setTab}
-            wallet={wallet}
-            assets={assets}
-            totalValue={totalValue}
-            onRefresh={() => refreshAssets(true)}
-            tokenList={tokenList}
-            network={network}
-            connection={connection}
-            onRetryFetchTokens={fetchTokens}
-            notify={showNotification}
-            onNavigate={setScreen}
-            onLogout={handleLogout}
-            contacts={contacts}
-          />
-        );
-      case 'receive':
-        return <ReceiveScreen t={t} wallet={wallet} onBack={() => setScreen('main')} notify={showNotification} />;
-      case 'send':
-        return (
-          <SendScreen
-            t={t}
-            wallet={wallet}
-            connection={connection}
-            contacts={contacts}
-            onBack={() => setScreen('main')}
-            notify={showNotification}
-          />
-        );
-      case 'history':
-        return <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => setScreen('main')} />;
-      case 'stake':
-        return (
-          <StakingScreen
-            t={t}
-            wallet={wallet}
-            connection={connection}
-            notify={showNotification}
-            onBack={() => setScreen('main')}
-            solBalance={assets.find((a: any) => a.symbol === 'SOL')?.amount || 0}
-          />
-        );
-      case 'settings_security':
-        return (
-          <SecuritySettingsScreen
-            t={t}
-            wallet={wallet}
-            biometrics={biometricsEnabled}
-            setBiometrics={async (en: boolean) => {
-              setBiometricsEnabled(en);
-              await persistSettings({ biometricsEnabled: en });
-            }}
-            hasPin={!!pin}
-            onSetupPin={() => {
-              setPendingBioEnable(false);
-              setScreen('pin_setup');
-            }}
-            onBack={() => setScreen('main')}
-          />
-        );
-      case 'address_book':
-        return (
-          <AddressBookScreen
-            t={t}
-            contacts={contacts}
-            onSave={saveContacts}
-            notify={showNotification}
-            onBack={() => setScreen('main')}
-          />
-        );
-      case 'settings_help':
-        return <HelpScreen t={t} onBack={() => setScreen('main')} />;
-      case 'settings_about':
-        return <AboutScreen t={t} onBack={() => setScreen('main')} />;
-      case 'settings_lang':
-        return <LanguageScreen onBack={() => setScreen('main')} onChange={changeLanguage} currentLang={lang} />;
-      case 'pin_setup':
-        return (
-          <PinSetupScreen
-            t={t}
-            onSuccess={handlePinSet}
-            onCancel={() => {
-              setPendingBioEnable(false);
-              setScreen('settings_security');
-            }}
-          />
-        );
-      case 'settings_network':
-        return (
-          <NetworkSettingsScreen
-            t={t}
-            currentNetwork={network}
-            setNetwork={async (net: any) => {
-              setNetwork(net);
-              await persistSettings({ network: net });
-            }}
-            currentRpc={rpcEndpoint}
-            setRpc={setRpcEndpoint}
-            onBack={() => setScreen('main')}
-          />
-        );
-      default:
-        return null;
+        if (!bootSyncDone) return <BootLoading title={t('processing')} />;
+        return <MainScreen t={t} activeTab={activeTab} setActiveTab={setTab} wallet={wallet} assets={assets} totalValue={totalValue} onRefresh={() => refreshAssets(true)} tokenList={tokenList} network={network} connection={connection} onRetryFetchTokens={fetchTokens} notify={showNotification} onNavigate={setScreen} onLogout={handleLogout} contacts={contacts} />;
+      case 'receive': return <ReceiveScreen t={t} wallet={wallet} onBack={() => setScreen('main')} notify={showNotification} />;
+      case 'send': return <SendScreen t={t} wallet={wallet} connection={connection} contacts={contacts} onBack={() => setScreen('main')} notify={showNotification} />;
+      case 'history': return <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => setScreen('main')} />;
+      case 'stake': return <StakingScreen t={t} wallet={wallet} connection={connection} notify={showNotification} onBack={() => setScreen('main')} solBalance={assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0} />; // ★ バグ修正
+      case 'settings_security': return <SecuritySettingsScreen t={t} wallet={wallet} biometrics={biometricsEnabled} setBiometrics={async (en: boolean) => { setBiometricsEnabled(en); await persistSettings({ biometricsEnabled: en }); }} hasPin={!!pin} onSetupPin={() => { setPendingBioEnable(false); setScreen('pin_setup'); }} onBack={() => setScreen('main')} />;
+      case 'address_book': return <AddressBookScreen t={t} contacts={contacts} onSave={saveContacts} notify={showNotification} onBack={() => setScreen('main')} />;
+      case 'settings_help': return <HelpScreen t={t} onBack={() => setScreen('main')} />;
+      case 'settings_about': return <AboutScreen t={t} onBack={() => setScreen('main')} />;
+      case 'settings_lang': return <LanguageScreen onBack={() => setScreen('main')} onChange={changeLanguage} currentLang={lang} />;
+      case 'pin_setup': return <PinSetupScreen t={t} onSuccess={handlePinSet} onCancel={() => { setPendingBioEnable(false); setScreen('settings_security'); }} />;
+      case 'settings_network': return <NetworkSettingsScreen t={t} currentNetwork={network} setNetwork={async (net: any) => { setNetwork(net); await persistSettings({ network: net }); }} currentRpc={rpcEndpoint} setRpc={setRpcEndpoint} onBack={() => setScreen('main')} />;
+      default: return null;
     }
   };
 
-  // ✅ SafeAreaProvider でアプリ全体を包む
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#2e1065" />
-
-        {notification && (
-          <View style={styles.notification}>
-            <Text style={styles.notificationText}>{notification}</Text>
-          </View>
-        )}
-
+        {notification && <View style={styles.notification}><Text style={styles.notificationText}>{notification}</Text></View>}
         {renderScreen()}
-
-        <ConfirmModal
-          visible={logoutConfirm}
-          title={t('logout_confirm_title')}
-          message={t('logout_confirm_desc')}
-          cancelText={t('cancel')}
-          confirmText={t('delete')}
-          onCancel={closeLogoutConfirm}
-          onConfirm={executeLogout}
-        />
+        <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
-const MainScreen = ({
-  t,
-  activeTab,
-  setActiveTab,
-  onNavigate,
-  onLogout,
-  onRetryFetchTokens,
-  wallet,
-  connection,
-  assets,
-  ...props
-}: any) => {
+const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryFetchTokens, wallet, connection, assets, ...props }: any) => {
   const tokenBalances = useMemo(() => {
     const balanceMap: { [key: string]: number } = {};
-    assets.forEach((a: any) => {
-      balanceMap[a.mint] = a.amount;
-    });
+    assets.forEach((a: any) => { balanceMap[a.mint] = a.amount; });
     return balanceMap;
   }, [assets]);
 
-  const solBalance = assets.find((a: any) => a.symbol === 'SOL')?.amount || 0;
+  // ★ バグ修正: symbolではなく、本物のSOLのmintアドレスで検索する
+  const solBalance = assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0;
 
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
-        {activeTab === 'home' && (
-          <DashboardScreen
-            t={t}
-            onNav={setActiveTab}
-            onNavigate={onNavigate}
-            wallet={wallet}
-            assets={assets}
-            {...props}
-          />
-        )}
-
-        {activeTab === 'swap' && (
-          <SwapScreen
-            t={t}
-            wallet={wallet}
-            connection={connection}
-            tokenList={props.tokenList}
-            notify={props.notify}
-            onRetryFetch={onRetryFetchTokens}
-            solBalance={solBalance}
-            tokenBalances={tokenBalances}
-          />
-        )}
-
-        {activeTab === 'history' && (
-          <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => setActiveTab('home')} />
-        )}
-
+        {activeTab === 'home' && <DashboardScreen t={t} onNav={setActiveTab} onNavigate={onNavigate} wallet={wallet} assets={assets} {...props} />}
+        {activeTab === 'swap' && <SwapScreen t={t} wallet={wallet} connection={connection} tokenList={props.tokenList} notify={props.notify} onRetryFetch={onRetryFetchTokens} solBalance={solBalance} tokenBalances={tokenBalances} />}
+        {activeTab === 'history' && <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => setActiveTab('home')} />}
         {activeTab === 'settings' && <SettingsScreen t={t} onNavigate={onNavigate} onLogout={onLogout} />}
       </View>
-
       <View style={styles.bottomNav}>
         <NavButton icon={Wallet} label={t('home')} active={activeTab === 'home'} onPress={() => setActiveTab('home')} />
         <NavButton icon={RefreshCw} label={t('swap')} active={activeTab === 'swap'} onPress={() => setActiveTab('swap')} />

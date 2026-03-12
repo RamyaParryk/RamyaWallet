@@ -12,6 +12,9 @@ import { SOL_MINT, JITO_SOL_MINT, JUPITER_BASE_PATH } from '../constants/config'
 import { parseSolanaError } from '../utils/solanaUtils';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 
+// ★ 追加: どこからでも資産を更新できるサービスを読み込む
+import { refreshAssetsService } from '../services/refreshAssets';
+
 const jupiterQuoteApi = createJupiterApiClient({ basePath: JUPITER_BASE_PATH });
 
 export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalance, onRetryFetch }: any) => {
@@ -93,6 +96,9 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
       setAmount('');
       setQuote(null);
       if (onRetryFetch) setTimeout(() => { onRetryFetch(); }, 2000);
+
+      // ★ ここが重要！ステーキング成功後に自動で残高をバックグラウンド更新する
+      refreshAssetsService({ force: true });
 
     } catch (e: any) {
       console.error("[STAKE] Failed:", e);

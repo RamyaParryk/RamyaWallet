@@ -10,6 +10,9 @@ import { shortenAddress } from '../utils/solanaUtils';
 // ★ モーダルをインポート
 import { SimpleAlertModal, SuccessModal } from '../components/ActionModals';
 
+// ★ 追加: どこからでも資産を更新できるサービスをインポート
+import { refreshAssetsService } from '../services/refreshAssets';
+
 // --- 受取画面 ---
 export const ReceiveScreen = ({ t, wallet, onBack, notify }: any) => {
   const address = wallet?.address || "";
@@ -117,6 +120,9 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
       setShowSuccess(true);
       setAddress(''); 
       setAmount(''); 
+
+      // ★ ここが重要！送信成功後に自動で残高をバックグラウンド更新する
+      refreshAssetsService({ force: true });
 
     } catch (e: any) {
       console.error(e);

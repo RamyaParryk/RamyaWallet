@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal } from 'react-native';
-import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet } from 'react-native';
+// ★ ここを修正: Globe と Server を追加しました！
+import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
-import { styles } from '../styles/globalStyles';
+import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { YOUTUBE_URL, GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
-// モーダルインポート
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 
-
-const SettingItem = ({ icon: Icon, title, desc, onPress, color="#222" }: any) => (
-  <TouchableOpacity style={styles.settingItem} onPress={onPress}>
-     <View style={[styles.settingIcon, {backgroundColor: color}]}>
-       <Icon size={20} color="#fff"/>
-     </View>
-     <View style={{flex:1}}>
-       <Text style={styles.settingText}>{title}</Text>
-       {desc && <Text style={styles.descTextSmall}>{desc}</Text>}
-     </View>
-     {color === '#222' && <ChevronRight size={20} color="#444" />}
+// モダンUI共通のカード型 SettingItem
+const SettingItem = ({ icon: Icon, title, desc, onPress, color = "rgba(168, 85, 247, 0.1)", iconColor = "#a855f7", isLast = false, rightElement }: any) => (
+  <TouchableOpacity 
+    style={[localStyles.settingItem, !isLast && localStyles.borderBottom]} 
+    onPress={onPress} 
+    activeOpacity={0.7}
+    disabled={!onPress}
+  >
+    <View style={[localStyles.iconWrapper, { backgroundColor: color }]}>
+      <Icon size={22} color={iconColor} />
+    </View>
+    <View style={localStyles.textContainer}>
+      <Text style={localStyles.title}>{title}</Text>
+      {desc && <Text style={localStyles.subtitle}>{desc}</Text>}
+    </View>
+    {rightElement ? rightElement : (onPress ? <ChevronRight size={20} color="#555" /> : null)}
   </TouchableOpacity>
 );
 
@@ -34,10 +39,9 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
   const [confirm, setConfirm] = useState<any>({ visible: false });
 
-  // ★単語数をカウント
   const wordCount = wallet?.mnemonic ? wallet.mnemonic.trim().split(/\s+/).length : 0;
 
-  if (!wallet) return <View style={styles.content} />;
+  if (!wallet) return <View style={globalStyles.content} />;
   
   const handleBiometrics = async (enabled: boolean) => {
     if (enabled) {
@@ -53,10 +57,10 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
       }
       try {
         const { available } = await rnBiometrics.isSensorAvailable();
-            if (!available) {
-                setAlert({ visible: true, title: t('error'), message: t('biometrics_error') });
-                return;
-            }
+        if (!available) {
+          setAlert({ visible: true, title: t('error'), message: t('biometrics_error') });
+          return;
+        }
         const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('biometrics') });
         if (success) setBiometrics(true);
       } catch(e) { 
@@ -68,73 +72,111 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   };
 
   return (
-    <ScrollView style={styles.content}>
+    <View style={globalStyles.content}>
       <HeaderRow title={t('security')} onBack={onBack} />
-      <SettingItem icon={Lock} title={t('pin_setup')} desc={hasPin ? "OK" : "NO"} onPress={onSetupPin} />
-      <View style={[styles.rowBetween, {paddingVertical:16, borderTopWidth:1, borderTopColor:'#222'}]}>
-        <Text style={styles.settingText}>{t('biometrics')}</Text>
-        <Switch value={biometrics} onValueChange={handleBiometrics} trackColor={{false: "#333", true: "#9333ea"}} />
-      </View>
-      <Text style={[styles.sectionHeader, {marginTop:30}]}>{t('recovery_phrase')}</Text>
-      <View style={styles.infoCard}>
-         <View style={styles.rowBetween}>
-           {/* ★ここを修正: 自動カウントした単語数を表示 */}
-           <Text style={styles.label}>{wordCount > 0 ? `${wordCount} words` : "Secret Phrase"}</Text>
-           <TouchableOpacity onPress={() => setShowMnemonic(!showMnemonic)}><Text style={styles.linkText}>{showMnemonic ? t('hide') : t('show')}</Text></TouchableOpacity>
-         </View>
-         {showMnemonic && <Text style={styles.secretText}>{wallet?.mnemonic || "Unavailable"}</Text>}
-      </View>
-      <Text style={[styles.sectionHeader, {marginTop:10}]}>{t('private_key')}</Text>
-      <View style={styles.infoCard}>
-         <View style={styles.rowBetween}>
-           <Text style={styles.label}>{t('raw_key')}</Text>
-           <TouchableOpacity onPress={() => setShowKey(!showKey)}><Text style={styles.linkText}>{showKey ? t('hide') : t('show')}</Text></TouchableOpacity>
-         </View>
-         {showKey && wallet?.secretKey && <Text style={styles.secretText}>{secretKeyToString(wallet.secretKey)}</Text>}
-      </View>
+      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+        
+        <Text style={localStyles.sectionHeader}>Authentication</Text>
+        <View style={localStyles.card}>
+          <SettingItem 
+            icon={Lock} 
+            title={t('pin_setup')} 
+            desc={hasPin ? "PIN is active" : "Not set"} 
+            onPress={onSetupPin} 
+          />
+          <SettingItem 
+            icon={ShieldCheck} 
+            title={t('biometrics')} 
+            desc="Fingerprint / FaceID"
+            isLast={true}
+            rightElement={
+              <Switch value={biometrics} onValueChange={handleBiometrics} trackColor={{false: "#333", true: "#a855f7"}} />
+            }
+          />
+        </View>
 
-      <SimpleAlertModal 
-        visible={alert.visible}
-        title={alert.title}
-        message={alert.message}
-        onClose={() => setAlert({ ...alert, visible: false })}
-      />
-      <ConfirmModal
-        visible={confirm.visible}
-        title={confirm.title}
-        message={confirm.message}
-        confirmText={confirm.confirmText}
-        cancelText={t('cancel')}
-        onCancel={() => setConfirm({ ...confirm, visible: false })}
-        onConfirm={confirm.onConfirm}
-      />
-    </ScrollView>
+        <Text style={localStyles.sectionHeader}>{t('recovery_phrase')}</Text>
+        <View style={localStyles.card}>
+          <View style={localStyles.secretCardHeader}>
+            <Text style={localStyles.secretCardTitle}>{wordCount > 0 ? `${wordCount} Words` : "Secret Phrase"}</Text>
+            <TouchableOpacity onPress={() => setShowMnemonic(!showMnemonic)} style={localStyles.toggleBtn}>
+              <Text style={localStyles.toggleBtnText}>{showMnemonic ? t('hide') : t('show')}</Text>
+            </TouchableOpacity>
+          </View>
+          {showMnemonic && (
+            <View style={localStyles.secretContent}>
+              <Text style={localStyles.secretText}>{wallet?.mnemonic || "Unavailable"}</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={localStyles.sectionHeader}>{t('private_key')}</Text>
+        <View style={localStyles.card}>
+          <View style={localStyles.secretCardHeader}>
+            <Text style={localStyles.secretCardTitle}>{t('raw_key')}</Text>
+            <TouchableOpacity onPress={() => setShowKey(!showKey)} style={localStyles.toggleBtn}>
+              <Text style={localStyles.toggleBtnText}>{showKey ? t('hide') : t('show')}</Text>
+            </TouchableOpacity>
+          </View>
+          {showKey && wallet?.secretKey && (
+            <View style={localStyles.secretContent}>
+              <Text style={localStyles.secretText}>{secretKeyToString(wallet.secretKey)}</Text>
+            </View>
+          )}
+        </View>
+
+        <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
+        <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={confirm.confirmText} cancelText={t('cancel')} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
+      </ScrollView>
+    </View>
   );
 };
 
 // --- ネットワーク設定画面 ---
 export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRpc, setRpc, onBack }: any) => {
   const networks = [{ id: 'mainnet-beta', name: 'Mainnet Beta', desc: 'Real Money' }, { id: 'devnet', name: 'Devnet', desc: 'Test Env' }];
-  const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius' }, { id: 'QuickNode', name: 'QuickNode' }];
+  const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius RPC' }, { id: 'QuickNode', name: 'QuickNode RPC' }];
+  
   return (
-    <View style={styles.content}>
+    <View style={globalStyles.content}>
       <HeaderRow title={t('network')} onBack={onBack} />
-      <ScrollView>
-        <Text style={styles.sectionHeader}>{t('environment')}</Text>
-        <View style={styles.settingGroup}>
-          {networks.map((net: any) => (
-            <TouchableOpacity key={net.id} style={[styles.networkItem, currentNetwork === net.id && styles.networkItemActive]} onPress={() => setNetwork(net.id)}>
-               <View><Text style={[styles.settingText, currentNetwork === net.id && {color:'#a855f7'}]}>{net.name}</Text><Text style={styles.descTextSmall}>{net.desc}</Text></View>
-               {currentNetwork === net.id && <Check size={20} color="#a855f7" />}
+      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+        
+        <Text style={localStyles.sectionHeader}>{t('environment')}</Text>
+        <View style={localStyles.card}>
+          {networks.map((net: any, idx) => (
+            <TouchableOpacity 
+              key={net.id} 
+              style={[localStyles.settingItem, idx !== networks.length - 1 && localStyles.borderBottom]} 
+              onPress={() => setNetwork(net.id)}
+            >
+              <View style={[localStyles.iconWrapper, currentNetwork === net.id ? { backgroundColor: 'rgba(168, 85, 247, 0.1)' } : { backgroundColor: '#222' }]}>
+                <Globe size={22} color={currentNetwork === net.id ? '#a855f7' : '#888'} />
+              </View>
+              <View style={localStyles.textContainer}>
+                <Text style={[localStyles.title, currentNetwork === net.id && { color: '#a855f7' }]}>{net.name}</Text>
+                <Text style={localStyles.subtitle}>{net.desc}</Text>
+              </View>
+              {currentNetwork === net.id && <Check size={20} color="#a855f7" />}
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={[styles.sectionHeader, {marginTop:20}]}>{t('rpc_endpoint')}</Text>
-        <View style={styles.settingGroup}>
-          {rpcs.map((rpc: any) => (
-            <TouchableOpacity key={rpc.id} style={[styles.networkItem, currentRpc === rpc.id && styles.networkItemActive]} onPress={() => setRpc(rpc.id)}>
-               <Text style={[styles.settingText, currentRpc === rpc.id && {color:'#a855f7'}]}>{rpc.name}</Text>
-               {currentRpc === rpc.id && <Check size={20} color="#a855f7" />}
+
+        <Text style={localStyles.sectionHeader}>{t('rpc_endpoint')}</Text>
+        <View style={localStyles.card}>
+          {rpcs.map((rpc: any, idx) => (
+            <TouchableOpacity 
+              key={rpc.id} 
+              style={[localStyles.settingItem, idx !== rpcs.length - 1 && localStyles.borderBottom]} 
+              onPress={() => setRpc(rpc.id)}
+            >
+              <View style={[localStyles.iconWrapper, currentRpc === rpc.id ? { backgroundColor: 'rgba(34, 197, 94, 0.1)' } : { backgroundColor: '#222' }]}>
+                <Server size={22} color={currentRpc === rpc.id ? '#22c55e' : '#888'} />
+              </View>
+              <View style={localStyles.textContainer}>
+                <Text style={[localStyles.title, currentRpc === rpc.id && { color: '#22c55e' }]}>{rpc.name}</Text>
+              </View>
+              {currentRpc === rpc.id && <Check size={20} color="#22c55e" />}
             </TouchableOpacity>
           ))}
         </View>
@@ -150,15 +192,21 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
     { code: 'ru', label: 'Русский' }, { code: 'de', label: 'Deutsch' }, { code: 'zh', label: '中文' }, { code: 'ko', label: '한국어' },
   ];
   return (
-    <View style={styles.content}>
+    <View style={globalStyles.content}>
       <HeaderRow title="Language" onBack={onBack} />
-      <ScrollView>
-        {langs.map(l => (
-          <TouchableOpacity key={l.code} style={styles.settingItem} onPress={() => onChange(l.code)}>
-            <Text style={[styles.settingText, currentLang===l.code && {color:'#a855f7'}]}>{l.label}</Text>
-            {currentLang===l.code && <Check size={20} color="#a855f7" />}
-          </TouchableOpacity>
-        ))}
+      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+        <View style={[localStyles.card, { marginTop: 20 }]}>
+          {langs.map((l, idx) => (
+            <TouchableOpacity 
+              key={l.code} 
+              style={[localStyles.settingItem, idx !== langs.length - 1 && localStyles.borderBottom]} 
+              onPress={() => onChange(l.code)}
+            >
+              <Text style={[localStyles.title, currentLang === l.code && { color: '#a855f7' }]}>{l.label}</Text>
+              {currentLang === l.code && <Check size={20} color="#a855f7" />}
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -167,31 +215,34 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
 // --- ヘルプ画面 ---
 export const HelpScreen = ({ t, onBack }: any) => {
   const items = [
-    {icon:RefreshCw, color:'#222', t:'faq_restore'}, 
-    {icon:TrendingUp, color:'#22c55e', t:'faq_stake'},
-    {icon:Percent, color:'#22c55e', t:'faq_apy'}, 
-    {icon:Zap, color:'#eab308', t:'faq_fee'},
-    {icon:ShieldCheck, color:'#ef4444', t:'faq_device'}, 
-    {icon:Wallet, color:'#a855f7', t:'faq_bank'},
-    {icon:AlertCircle, color:'#6366f1', t:'faq_trouble_swap'},
-    {icon:AlertCircle, color:'#f59e0b', t:'faq_trouble_price'},
-    {icon:AlertCircle, color:'#10b981', t:'faq_trouble_balance'}
+    {icon:RefreshCw, color:'#a855f7', bg:'rgba(168, 85, 247, 0.1)', t:'faq_restore'}, 
+    {icon:TrendingUp, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_stake'},
+    {icon:Percent, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_apy'}, 
+    {icon:Zap, color:'#eab308', bg:'rgba(234, 179, 8, 0.1)', t:'faq_fee'},
+    {icon:ShieldCheck, color:'#ef4444', bg:'rgba(239, 68, 68, 0.1)', t:'faq_device'}, 
+    {icon:Wallet, color:'#3b82f6', bg:'rgba(59, 130, 246, 0.1)', t:'faq_bank'},
+    {icon:AlertCircle, color:'#6366f1', bg:'rgba(99, 102, 241, 0.1)', t:'faq_trouble_swap'},
+    {icon:AlertCircle, color:'#f59e0b', bg:'rgba(245, 158, 11, 0.1)', t:'faq_trouble_price'},
+    {icon:AlertCircle, color:'#10b981', bg:'rgba(16, 185, 129, 0.1)', t:'faq_trouble_balance'}
   ];
   return (
-    <ScrollView style={styles.content}>
+    <View style={globalStyles.content}>
       <HeaderRow title={t('help')} onBack={onBack} />
-      <Text style={styles.sectionHeader}>FAQ & Support</Text>
-      {items.map((it, i) => (
-        <View key={i} style={styles.helpItemContainer}>
-           <View style={styles.helpHeaderRow}>
-              <View style={[styles.helpIconBadge, {backgroundColor: it.color}]}><it.icon size={16} color="#fff" /></View>
-              <Text style={styles.helpTitle}>{t(it.t)}</Text>
-           </View>
-           <Text style={styles.helpDesc}>{t(it.t + '_desc')}</Text>
+      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+        <Text style={localStyles.sectionHeader}>FAQ & Support</Text>
+        <View style={localStyles.card}>
+          {items.map((it, i) => (
+            <View key={i} style={[localStyles.helpItem, i !== items.length - 1 && localStyles.borderBottom]}>
+               <View style={localStyles.helpHeaderRow}>
+                  <View style={[localStyles.iconWrapper, {backgroundColor: it.bg, width: 32, height: 32, borderRadius: 8}]}><it.icon size={16} color={it.color} /></View>
+                  <Text style={localStyles.helpTitle}>{t(it.t)}</Text>
+               </View>
+               <Text style={localStyles.helpDesc}>{t(it.t + '_desc')}</Text>
+            </View>
+          ))}
         </View>
-      ))}
-      <View style={{height:40}}/>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -199,34 +250,41 @@ export const HelpScreen = ({ t, onBack }: any) => {
 export const AboutScreen = ({ t, onBack }: any) => {
   const [modalVisible, setModalVisible] = useState(false);
   return (
-    <View style={styles.content}>
+    <View style={globalStyles.content}>
       <HeaderRow title={t('about')} onBack={onBack} />
-      <ScrollView>
-        <View style={{alignItems:'center', marginVertical: 30}}>
-          <View style={[styles.logoBox, {width:100, height:100, borderRadius:30}]}>
-             <Image source={require('../../assets/splash.png')} style={{width: 60, height: 60, borderRadius: 15}}/>
+      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+        <View style={{alignItems:'center', marginVertical: 40}}>
+          <View style={{width:100, height:100, borderRadius:24, backgroundColor:'#1a1a1a', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#333'}}>
+             <Image source={require('../../assets/splash.png')} style={{width: 64, height: 64, borderRadius: 16}}/>
           </View>
-          <Text style={[styles.title, {fontSize:24, marginTop:10}]}>{t('welcome_title')}</Text>
-          <Text style={{color:'#888'}}>Version {packageJson.version}</Text>
+          <Text style={{fontSize:24, fontWeight:'bold', color:'#fff', marginTop:16}}>{t('welcome_title')}</Text>
+          <Text style={{color:'#888', marginTop: 4}}>Version {packageJson.version}</Text>
         </View>
 
-        <View style={styles.settingGroup}>
-           <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="#CD201F" />
-           <SettingItem icon={Github} title="Official GitHub" desc="Check Source Code" onPress={() => Linking.openURL(GITHUB_URL)} color="#171515" />
-           <TouchableOpacity style={styles.settingItem} onPress={() => setModalVisible(true)}>
-              <View style={styles.settingIcon}><Info size={20} color="#fff"/></View>
-              <View style={{flex:1}}><Text style={styles.settingText}>{t('terms')}</Text><Text style={styles.descTextSmall}>{t('terms_desc')}</Text></View>
-              <ChevronRight size={20} color="#444" />
-           </TouchableOpacity>
+        <Text style={localStyles.sectionHeader}>Links & Info</Text>
+        <View style={localStyles.card}>
+           <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="rgba(205, 32, 31, 0.1)" iconColor="#CD201F" />
+           <SettingItem icon={Github} title="Official GitHub" desc="Open Source" onPress={() => Linking.openURL(GITHUB_URL)} color="rgba(255, 255, 255, 0.1)" iconColor="#fff" />
+           <SettingItem icon={Info} title={t('terms')} desc={t('terms_desc')} onPress={() => setModalVisible(true)} isLast={true} />
         </View>
-        <Text style={{textAlign:'center', color:'#444', marginTop:50, marginBottom:30}}>Made with ❤️ for Solana Community</Text>
+        
+        <Text style={{textAlign:'center', color:'#555', marginTop:40, fontSize: 12}}>Made with ❤️ for the Solana Community</Text>
       </ScrollView>
+
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, {height: '80%'}]}>
-            <View style={styles.rowBetween}><Text style={styles.modalTitle}>{t('terms_title')}</Text><TouchableOpacity onPress={() => setModalVisible(false)}><X color="#fff" /></TouchableOpacity></View>
-            <ScrollView style={{marginTop: 10}}>
-              {[1,2,3,4,5,6].map(n => <View key={n}><Text style={styles.termTitle}>{t(`term_${n}_title`)}</Text><Text style={styles.termText}>{t(`term_${n}_desc`)}</Text></View>)}
+        <View style={globalStyles.modalOverlay}>
+          <View style={[globalStyles.modalContent, {height: '80%'}]}>
+            <View style={globalStyles.rowBetween}>
+              <Text style={globalStyles.modalTitle}>{t('terms_title')}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}><X color="#fff" /></TouchableOpacity>
+            </View>
+            <ScrollView style={{marginTop: 16}}>
+              {[1,2,3,4,5,6].map(n => (
+                <View key={n} style={{marginBottom: 20}}>
+                  <Text style={{color:'#fff', fontWeight:'bold', fontSize:16, marginBottom:6}}>{t(`term_${n}_title`)}</Text>
+                  <Text style={{color:'#aaa', lineHeight:20}}>{t(`term_${n}_desc`)}</Text>
+                </View>
+              ))}
               <View style={{height: 50}}/>
             </ScrollView>
           </View>
@@ -235,3 +293,122 @@ export const AboutScreen = ({ t, onBack }: any) => {
     </View>
   );
 };
+
+// モダンUI共通のスタイル定義
+const localStyles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 12,
+    marginTop: 24,
+    letterSpacing: 1,
+  },
+  card: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+    overflow: 'hidden',
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#1a1a1a',
+  },
+  borderBottom: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  iconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 10,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  subtitle: {
+    color: '#aaa',
+    fontSize: 13,
+  },
+  
+  secretCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  secretCardTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  toggleBtn: {
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  toggleBtnText: {
+    color: '#a855f7',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  secretContent: {
+    padding: 16,
+    paddingTop: 0,
+    backgroundColor: '#1a1a1a',
+  },
+  secretText: {
+    color: '#ef4444',
+    fontFamily: 'monospace',
+    fontSize: 14,
+    lineHeight: 22,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+
+  helpItem: {
+    padding: 16,
+  },
+  helpHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  helpTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  helpDesc: {
+    color: '#aaa',
+    fontSize: 13,
+    lineHeight: 20,
+    paddingLeft: 44,
+  },
+});
