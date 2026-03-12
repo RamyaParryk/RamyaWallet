@@ -4,7 +4,6 @@ import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-// ★ 修正: SafeAreaView をここから削除しました（非推奨警告の原因）
 import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
@@ -13,13 +12,10 @@ import 'text-encoding-polyfill';
 
 import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
-
-// ★ 修正: 新しい SafeAreaView をこちらからインポートしています
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
-// ★ 本物のSOLのアドレスをインポート
 import { SOL_MINT } from './src/constants/config';
 
 import { HistoryScreen } from './src/screens/HistoryScreen';
@@ -331,7 +327,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#2e1065" />
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         {notification && <View style={styles.notification}><Text style={styles.notificationText}>{notification}</Text></View>}
         {renderScreen()}
         <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />

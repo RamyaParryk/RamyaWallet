@@ -97,7 +97,7 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
             localStyles.scrollContent,
             {
               paddingTop: insets.top + 16,
-              paddingBottom: insets.bottom + (showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 40),
+              paddingBottom: insets.bottom + (showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 20),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -143,7 +143,7 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
 
         {/* ✅ 画面下固定バナー（Androidのみ） */}
         {showBanner ? (
-          <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <View style={localStyles.bannerContainer}>
             <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
           </View>
         ) : null}
