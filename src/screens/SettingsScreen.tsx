@@ -112,7 +112,7 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
           </View>
 
           {/* --- Security & Network Section --- */}
-          <Text style={localStyles.sectionHeader}>{t('security_network') || 'Security & Network'}</Text>
+          <Text style={localStyles.sectionHeader}>{t('security_network')}</Text>
           <View style={localStyles.card}>
             <SettingItem icon={ShieldCheck} title={t('security')} onPress={() => onNavigate('settings_security')} />
             <SettingItem icon={Server} title={t('network')} onPress={() => onNavigate('settings_network')} isLast={true} />
@@ -126,7 +126,7 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
           </View>
 
           {/* --- Danger Zone --- */}
-          <Text style={[localStyles.sectionHeader, { color: '#ef4444', marginTop: 30 }]}>Danger Zone</Text>
+          <Text style={[localStyles.sectionHeader, { color: '#ef4444', marginTop: 30 }]}>{t('danger_zone')}</Text>
           <View style={[localStyles.card, { borderColor: 'rgba(239, 68, 68, 0.3)', marginBottom: 20 }]}>
             <SettingItem 
               icon={LogOut} 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet } from 'react-native';
-// ★ ここを修正: Globe と Server を追加しました！
+// Globe と Server を追加
 import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
@@ -216,6 +216,7 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
 export const HelpScreen = ({ t, onBack }: any) => {
   const items = [
     {icon:RefreshCw, color:'#a855f7', bg:'rgba(168, 85, 247, 0.1)', t:'faq_restore'}, 
+    {icon: Info, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'help_faq_staking_title', descKey: 'help_faq_staking_answer'},
     {icon:TrendingUp, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_stake'},
     {icon:Percent, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_apy'}, 
     {icon:Zap, color:'#eab308', bg:'rgba(234, 179, 8, 0.1)', t:'faq_fee'},
@@ -225,6 +226,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
     {icon:AlertCircle, color:'#f59e0b', bg:'rgba(245, 158, 11, 0.1)', t:'faq_trouble_price'},
     {icon:AlertCircle, color:'#10b981', bg:'rgba(16, 185, 129, 0.1)', t:'faq_trouble_balance'}
   ];
+
   return (
     <View style={globalStyles.content}>
       <HeaderRow title={t('help')} onBack={onBack} />
@@ -234,10 +236,14 @@ export const HelpScreen = ({ t, onBack }: any) => {
           {items.map((it, i) => (
             <View key={i} style={[localStyles.helpItem, i !== items.length - 1 && localStyles.borderBottom]}>
                <View style={localStyles.helpHeaderRow}>
-                  <View style={[localStyles.iconWrapper, {backgroundColor: it.bg, width: 32, height: 32, borderRadius: 8}]}><it.icon size={16} color={it.color} /></View>
-                  <Text style={localStyles.helpTitle}>{t(it.t)}</Text>
+                  <View style={[localStyles.iconWrapper, {backgroundColor: it.bg, width: 32, height: 32, borderRadius: 8}]}>
+                    <it.icon size={16} color={it.color} />
+                  </View>
+                  {/* titleKey があればそれを使い、無ければ t を使う */}
+                  <Text style={localStyles.helpTitle}>{t(it.titleKey || it.t)}</Text>
                </View>
-               <Text style={localStyles.helpDesc}>{t(it.t + '_desc')}</Text>
+               {/* descKey があればそれを使い、無ければ t + '_desc' を使う */}
+               <Text style={localStyles.helpDesc}>{t(it.descKey || (it.t ? it.t + '_desc' : ''))}</Text>
             </View>
           ))}
         </View>
