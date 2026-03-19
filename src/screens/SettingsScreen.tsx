@@ -86,18 +86,16 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
   const showBanner = adUnitId.length > 0;
 
   return (
-    // ✅ top を外して背景をステータスバー下まで（Edge-to-Edge）
-    <SafeAreaView style={localStyles.root} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={localStyles.root} edges={['top']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       <View style={localStyles.container}>
         <ScrollView
-          style={globalStyles.content}
+          style={{ flex: 1 }}
           contentContainerStyle={[
             localStyles.scrollContent,
             {
-              paddingTop: insets.top + 16,
-              paddingBottom: insets.bottom + (showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 20),
+              paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 20,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -165,7 +163,6 @@ const localStyles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     marginBottom: 20,
-    paddingTop: 10,
   },
   sectionHeader: {
     color: '#888',

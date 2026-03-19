@@ -18,22 +18,16 @@ const getRelativeTime = (timestamp?: number | null) => {
   return new Date(timestamp * 1000).toLocaleDateString();
 };
 
-// ★ 新設：長すぎる文字列（アドレス）を検知して短く綺麗に整形する関数
 const formatDescription = (desc: string, type: string, myAddress: string) => {
   if (!desc || desc === 'UNKNOWN') {
     if (type === 'SWAP') return 'Token Swap';
     if (type === 'TRANSFER') return 'Token Transfer';
     return 'Contract Interaction';
   }
-
-  // 1. 自分のアドレスを「You」に置き換える
   let formatted = desc.replace(new RegExp(myAddress, 'g'), 'You');
-
-  // 2. 文章内に含まれる他のSolanaアドレス（32〜44文字の英数字）を自動検知して短縮する
   formatted = formatted.replace(/[1-9A-HJ-NP-Za-km-z]{32,44}/g, (match) => {
     return `${match.slice(0, 4)}...${match.slice(-4)}`;
   });
-
   return formatted;
 };
 
@@ -47,18 +41,14 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
       setLoading(false);
       return;
     }
-
     try {
       if (HELIUS_API_KEY) {
         const url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${HELIUS_API_KEY}`;
         const res = await fetch(url);
-        
         if (res.ok) {
           const parsedData = await res.json();
           const formatted = parsedData.map((tx: any) => {
-            // ★ ここで先ほど作った整形関数を通す
             const cleanDescription = formatDescription(tx.description, tx.type, address);
-
             return {
               signature: tx.signature,
               blockTime: tx.timestamp,
@@ -69,19 +59,15 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
               type: tx.type,
             };
           });
-          
           setHistory(formatted);
           setLoading(false);
           setRefreshing(false);
           return;
         }
       }
-
-      // フォールバック
       const connection = new Connection(MAINNET_RPC_URL, 'confirmed');
       const pubKey = new PublicKey(address);
       const signatures = await connection.getSignaturesForAddress(pubKey, { limit: 20 });
-      
       const data = signatures.map(sig => ({
         signature: sig.signature,
         blockTime: sig.blockTime,
@@ -91,7 +77,6 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
         description: 'Contract Interaction',
         type: 'UNKNOWN'
       }));
-
       setHistory(data);
     } catch (e) {
       console.error("[HISTORY] Fetch failed:", e);
@@ -101,16 +86,10 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
     }
   }, [address]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchHistory();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchHistory(); };
 
-  // アイコンの出し分け
   const getIconForType = (type: string, isFailed: boolean) => {
     if (isFailed) return <AlertCircle size={20} color="#ef4444" />;
     switch (type) {
@@ -132,7 +111,8 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
   };
 
   return (
-    <View style={styles.content}>
+    // ★ 修正: styles.content を外し、他画面とヘッダー高さを完璧に合わせる
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <Text style={localStyles.screenTitle}>{t('history') || 'Transaction History'}</Text>
       
       {loading ? (
@@ -162,7 +142,6 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
                 </View>
 
                 <View style={localStyles.txInfo}>
-                  {/* ★ numberOfLinesを3にして、少し長めの文章でも省略しつつ表示 */}
                   <Text style={localStyles.txTitle} numberOfLines={3}>
                     {isFailed ? 'Failed Transaction' : item.description}
                   </Text>

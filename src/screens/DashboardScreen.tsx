@@ -76,7 +76,7 @@ const StakedAssetCard = ({ asset }: { asset: AssetItemProps }) => (
   </View>
 );
 
-// ★ 新設: NFT用のカード型コンポーネント
+// ★ NFT用のカード型コンポーネント
 const NftCard = ({ asset }: { asset: AssetItemProps }) => (
   <TouchableOpacity style={localStyles.nftCard} activeOpacity={0.8}>
     <View style={localStyles.nftImageContainer}>
@@ -98,14 +98,11 @@ const NftCard = ({ asset }: { asset: AssetItemProps }) => (
 // --- メインコンポーネント ---
 export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, onRefresh, onNavigate }: any) => {
   const [buyModalVisible, setBuyModalVisible] = useState(false);
-  // ★ タブのState (Tokens か NFTs か)
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
 
   // ★ 資産の分類 (decimals === 0 をNFTとみなす)
   const stakedAssets = assets?.filter((a: any) => a.mint === 'native-stake') || [];
-  // Token: ステーキング以外 且つ 小数点がある(Decimals > 0)
   const liquidAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals > 0) || [];
-  // NFT: 小数点がない(Decimals === 0)
   const nftAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals === 0) || [];
 
   return (
@@ -161,7 +158,7 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
         </View>
       )}
 
-      {/* ★ 新設: タブ切り替えUI (Backpack風) */}
+      {/* ★ タブ切り替えUI */}
       <View style={localStyles.tabContainer}>
         <TouchableOpacity 
           style={[localStyles.tabButton, activeTab === 'tokens' && localStyles.activeTab]} 

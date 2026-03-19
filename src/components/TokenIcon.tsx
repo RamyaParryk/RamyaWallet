@@ -9,7 +9,7 @@ interface TokenIconProps {
   size?: number;
   forceRetry?: boolean;
 
-  // ★ 追加：画像が壊れてたら親に知らせる（mint単位でブラックリスト化できる）
+  // ★ 画像が壊れてたら親に知らせる（mint単位でブラックリスト化できる）
   onBadIcon?: (mint: string, uri: string) => void;
 }
 

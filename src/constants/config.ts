@@ -38,4 +38,4 @@ export const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 export const MY_PLATFORM_FEE_BPS = 0; 
 export const YOUTUBE_URL = "https://www.youtube.com/@ramyaparryk";
-export const GITHUB_URL = "https://github.com/RamyaParryk/RamyaWallet";
+export const GITHUB_URL = "https://ramyaparryk.github.io/RamyaWallet/";

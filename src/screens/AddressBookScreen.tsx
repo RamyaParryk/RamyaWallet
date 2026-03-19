@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { Plus, Copy, Trash2 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { PublicKey } from '@solana/web3.js';
@@ -10,7 +10,16 @@ import { shortenAddress } from '../utils/solanaUtils';
 // ★カスタムモーダルをインポート
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 
+// ★ 広告と安全領域用のインポートを追加
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+
+const BANNER_ESTIMATED_HEIGHT = 60;
+
 export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) => {
+  const insets = useSafeAreaInsets();
+
   // 連絡先追加用のモーダル表示状態
   const [modalVisible, setModalVisible] = useState(false);
   const [newName, setNewName] = useState(''); 
@@ -19,6 +28,13 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
   // ★ アラート・確認用State
   const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [confirm, setConfirm] = useState({ visible: false, title: '', message: '', onConfirm: () => {} });
+
+  // 広告の表示判定
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
 
   const addContact = () => {
     if(!newName || !newAddr) return;
@@ -29,13 +45,11 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
       setNewName(''); setNewAddr(''); setModalVisible(false);
       notify(t('added'));
     } catch(e) {
-      // ★ setAlert を使用
       setAlert({ visible: true, title: t('error'), message: t('invalid_address'), type: 'error' });
     }
   };
 
   const deleteContact = (index: number) => {
-    // ★ setConfirm を使用
     setConfirm({
       visible: true,
       title: t('delete'),
@@ -43,17 +57,32 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
       onConfirm: () => {
         const updated = contacts.filter((_:any, i:number) => i !== index);
         onSave(updated);
-        // 処理が終わったらモーダルを閉じる
         setConfirm(prev => ({ ...prev, visible: false }));
       }
     });
   };
 
   return (
-    <View style={styles.content}>
-      <HeaderRow title={t('address_book')} onBack={onBack} rightIcon={<TouchableOpacity onPress={() => setModalVisible(true)}><Plus size={24} color="#a855f7" /></TouchableOpacity>} />
+    // ★ styles.content を外し、他の画面と同じように高さを完璧に揃えます
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <HeaderRow 
+        title={t('address_book')} 
+        onBack={onBack} 
+        rightIcon={
+          <TouchableOpacity onPress={() => setModalVisible(true)}>
+            <Plus size={24} color="#a855f7" />
+          </TouchableOpacity>
+        } 
+      />
       
-      <ScrollView>
+      <ScrollView 
+        contentContainerStyle={{ 
+          paddingHorizontal: 16, 
+          paddingTop: 16,
+          // ★ 広告の高さ分の余白を下部に確保
+          paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 
+        }}
+      >
         {contacts.length === 0 ? <Text style={styles.descText}>Empty</Text> : contacts.map((c: any, i: number) => (
           <View key={i} style={styles.settingItem}>
              <View style={{flex:1}}>
@@ -89,7 +118,7 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
         </View>
       )}
 
-      {/* ★カスタムモーダルを配置 */}
+      {/* カスタムモーダルを配置 */}
       <SimpleAlertModal 
         visible={alert.visible} 
         title={alert.title} 
@@ -107,6 +136,27 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
         onCancel={() => setConfirm({ ...confirm, visible: false })}
         onConfirm={confirm.onConfirm}
       />
+
+      {/* ★ 広告バナーを最下部に固定表示 */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
+
+// バナー用のローカルスタイルを追加
+const localStyles = StyleSheet.create({
+  bannerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+});

@@ -70,7 +70,7 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
     tempAssets.push({ mint: 'native-stake', symbol: 'SOL', name: 'Native Stake', amount: totalStakeLamports / LAMPORTS_PER_SOL, decimals: 9, price: 0, value: 0, logoURI: solLogo, status: 'verified' });
   }
 
-  // ---- ★ 修正: 通常のSPLとToken-2022の両方を同時に取得する
+  // ---- 通常のSPLとToken-2022の両方を同時に取得する
   const [tokenAccounts, token2022Accounts] = await Promise.all([
     connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_PROGRAM_ID }),
     connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_2022_PROGRAM_ID })
@@ -105,6 +105,58 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
     mintsToFetchPrice.push(mint);
   }
 
+  // ---- ★ 追加: Helius DAS APIによるNFTの一括取得（無料！）
+  try {
+    const response = await fetch(connection.rpcEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'nft-fetch',
+        method: 'getAssetsByOwner',
+        params: {
+          ownerAddress: walletAddress,
+          page: 1,
+          limit: 1000,
+          displayOptions: {
+            showFungible: false // 通常のトークンは除外し、NFTだけを取得する
+          }
+        },
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.result && data.result.items) {
+        for (const item of data.result.items) {
+          const mint = item.id;
+          
+          // 既に通常のトークンとして取得されていないか確認
+          if (!tempAssets.find(a => a.mint === mint)) {
+            const name = item.content?.metadata?.name || 'Unknown NFT';
+            const symbol = item.content?.metadata?.symbol || 'NFT';
+            const logoURI = item.content?.links?.image || item.content?.files?.[0]?.uri || '';
+            const amount = item.ownership?.amount || 1;
+            
+            tempAssets.push({
+              mint,
+              symbol,
+              name,
+              amount,
+              decimals: 0, // ★ ダッシュボードでNFTとして判定させるためのキー
+              logoURI,
+              status: 'verified',
+              price: 0,
+              value: 0
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.log("[REFRESH] DAS API NFT fetch error (Maybe unsupported RPC):", e);
+  }
+
   // ---- Prices
   let totalValue = 0;
   if (mintsToFetchPrice.length > 0) {
@@ -116,7 +168,7 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
         if (a.mint === 'native-stake') {
           a.price = solPrice;
           a.value = a.amount * solPrice;
-        } else {
+        } else if (a.decimals > 0) { // NFT(decimals:0)は価格計算から除外
           const p = priceMap[a.mint]?.price ? Number(priceMap[a.mint].price) : 0;
           a.price = p;
           a.value = a.amount * p;

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { ArrowDown } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Buffer } from 'buffer';
@@ -11,13 +11,24 @@ import { HeaderRow } from '../components/HeaderRow';
 import { SOL_MINT, JITO_SOL_MINT, JUPITER_BASE_PATH } from '../constants/config';
 import { parseSolanaError } from '../utils/solanaUtils';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
-
-// ★ 追加: どこからでも資産を更新できるサービスを読み込む
 import { refreshAssetsService } from '../services/refreshAssets';
 
+// ★ 追加: 広告と安全領域用のインポート
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+
 const jupiterQuoteApi = createJupiterApiClient({ basePath: JUPITER_BASE_PATH });
+const BANNER_ESTIMATED_HEIGHT = 60;
 
 export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalance, onRetryFetch }: any) => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
+
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [quote, setQuote] = useState<any>(null);
@@ -97,7 +108,6 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
       setQuote(null);
       if (onRetryFetch) setTimeout(() => { onRetryFetch(); }, 2000);
 
-      // ★ ここが重要！ステーキング成功後に自動で残高をバックグラウンド更新する
       refreshAssetsService({ force: true });
 
     } catch (e: any) {
@@ -114,18 +124,23 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
     : "0.00";
 
   return (
-    <View style={styles.content}>
+    // ★ 修正: styles.content を外す
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('staking_btn')} onBack={onBack} />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Deposit Card (SOL) */}
+      <ScrollView 
+        contentContainerStyle={{ 
+          paddingHorizontal: 16, 
+          // ★ 広告の高さ分の余白を下部に確保
+          paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 
+        }}
+      >
         <View style={[localStyles.card, { marginTop: 10 }]}>
           <View style={localStyles.cardHeader}>
             <Text style={localStyles.label}>{t('deposit')} (SOL)</Text>
             <Text style={localStyles.balanceText}>{t('available')}: {safeBalance.toFixed(4)} SOL</Text>
           </View>
           
-          {/* ★ Swap画面と同じように右寄せ・デカ文字に変更 */}
           <TextInput 
             style={[localStyles.amountInput, { fontSize: amount.length > 8 ? 24 : 32 }]} 
             placeholder="0" 
@@ -150,7 +165,6 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
            </View>
         </View>
 
-        {/* Receive Card (JitoSOL) */}
         <View style={[localStyles.card, { marginTop: 0, paddingTop: 24 }]}>
           <View style={localStyles.cardHeader}>
             <Text style={localStyles.label}>{t('receive_lbl')} (JitoSOL)</Text>
@@ -163,7 +177,6 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
           {loading ? (
             <ActivityIndicator color="#a855f7" style={{alignSelf: 'flex-end', marginVertical: 10}} /> 
           ) : (
-            // ★ こちらも右寄せに統一
             <Text style={[localStyles.amountInput, { color: quote ? '#fff' : '#666', fontSize: estimatedJitoSol.length > 8 ? 24 : 32 }]}>
               {estimatedJitoSol}
             </Text>
@@ -201,11 +214,17 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
         message={alert.message}
         onClose={() => setAlert({ ...alert, visible: false })}
       />
+
+      {/* ★ 広告バナーを最下部に固定表示 */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
-// ★ SwapScreenに合わせたスタイル定義を追加
 const localStyles = StyleSheet.create({
   card: { backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#333' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
@@ -216,5 +235,16 @@ const localStyles = StyleSheet.create({
   percentBtn: { backgroundColor: '#2a2a2a', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#444' },
   percentText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold' },
   arrowCircle: { backgroundColor: '#111', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#333' },
-  coinIcon: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }
+  coinIcon: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  // ★ バナー用のスタイル
+  bannerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
 });

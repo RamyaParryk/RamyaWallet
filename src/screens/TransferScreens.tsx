@@ -7,10 +7,7 @@ import { Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { shortenAddress } from '../utils/solanaUtils';
-// ★ モーダルをインポート
 import { SimpleAlertModal, SuccessModal } from '../components/ActionModals';
-
-// ★ 追加: どこからでも資産を更新できるサービスをインポート
 import { refreshAssetsService } from '../services/refreshAssets';
 
 // --- 受取画面 ---
@@ -27,7 +24,8 @@ export const ReceiveScreen = ({ t, wallet, onBack, notify }: any) => {
   };
 
   return (
-    <View style={styles.content}>
+    // ★ 修正
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('receive')} onBack={onBack} />
       <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
          <View style={{backgroundColor: 'white', padding: 20, borderRadius: 20, marginBottom: 30}}>
@@ -60,20 +58,16 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
   const [loading, setLoading] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
   
-  // ★ State (アラート用と成功用)
   const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSend = async () => {
     Keyboard.dismiss();
-    // バリデーション
     if (!address || !amount) return;
     
-    // アドレスチェック
     try {
       new PublicKey(address);
     } catch {
-      // ★ Alert.alert ではなく setAlert を使う
       setAlert({ visible: true, title: t('error'), message: t('invalid_address'), type: 'error' });
       return;
     }
@@ -84,10 +78,8 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
       const destPubkey = new PublicKey(address);
       const lamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
 
-      // 1. 最新のブロックハッシュを取得
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
 
-      // 2. トランザクション作成
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey,
@@ -99,7 +91,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = fromPubkey;
 
-      // 3. 署名と送信
       const keypair = Keypair.fromSecretKey(wallet.secretKey);
       const signature = await connection.sendTransaction(transaction, [keypair], {
         skipPreflight: false,
@@ -109,24 +100,20 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
       notify(t('sending'));
       console.log("Sent signature:", signature);
 
-      // 4. トランザクションの確定待ち
       await connection.confirmTransaction({
         blockhash,
         lastValidBlockHeight,
         signature
       }, 'confirmed');
       
-      // ★ 成功モーダルを表示
       setShowSuccess(true);
       setAddress(''); 
       setAmount(''); 
 
-      // ★ ここが重要！送信成功後に自動で残高をバックグラウンド更新する
       refreshAssetsService({ force: true });
 
     } catch (e: any) {
       console.error(e);
-      // ★ エラーモーダルを表示
       setAlert({ visible: true, title: t('send_failed'), message: e.message || "Unknown error", type: 'error' });
     } finally { 
       setLoading(false); 
@@ -134,9 +121,10 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
   };
 
   return (
-    <View style={styles.content}>
+    // ★ 修正
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('send')} onBack={onBack} rightIcon={<TouchableOpacity onPress={() => setShowContacts(true)}><Users size={24} color="#a855f7"/></TouchableOpacity>} />
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}>
         <View style={styles.swapCard}>
           <Text style={styles.label}>{t('recipient')}</Text>
           <TextInput 
@@ -177,7 +165,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify }: 
         </View>
       )}
 
-      {/* ★ ここに新しいモーダルを配置 */}
       <SimpleAlertModal 
         visible={alert.visible} 
         title={alert.title} 

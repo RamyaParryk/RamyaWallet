@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet } from 'react-native';
-// Globe と Server を追加
+import React, { useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet, Platform } from 'react-native';
 import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
@@ -10,6 +9,13 @@ import { YOUTUBE_URL, GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
+
+// ★ 広告と安全領域用のインポートを追加
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+
+const BANNER_ESTIMATED_HEIGHT = 60;
 
 // モダンUI共通のカード型 SettingItem
 const SettingItem = ({ icon: Icon, title, desc, onPress, color = "rgba(168, 85, 247, 0.1)", iconColor = "#a855f7", isLast = false, rightElement }: any) => (
@@ -35,11 +41,19 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const rnBiometrics = new ReactNativeBiometrics();
+  const insets = useSafeAreaInsets();
   
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
   const [confirm, setConfirm] = useState<any>({ visible: false });
 
   const wordCount = wallet?.mnemonic ? wallet.mnemonic.trim().split(/\s+/).length : 0;
+
+  // 広告の表示判定
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
 
   if (!wallet) return <View style={globalStyles.content} />;
   
@@ -72,9 +86,9 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   };
 
   return (
-    <View style={globalStyles.content}>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('security')} onBack={onBack} />
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         
         <Text style={localStyles.sectionHeader}>Authentication</Text>
         <View style={localStyles.card}>
@@ -128,19 +142,33 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
         <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
         <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={confirm.confirmText} cancelText={t('cancel')} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
       </ScrollView>
+
+      {/* 広告バナー */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 // --- ネットワーク設定画面 ---
 export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRpc, setRpc, onBack }: any) => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
+
   const networks = [{ id: 'mainnet-beta', name: 'Mainnet Beta', desc: 'Real Money' }, { id: 'devnet', name: 'Devnet', desc: 'Test Env' }];
   const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius RPC' }, { id: 'QuickNode', name: 'QuickNode RPC' }];
   
   return (
-    <View style={globalStyles.content}>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('network')} onBack={onBack} />
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         
         <Text style={localStyles.sectionHeader}>{t('environment')}</Text>
         <View style={localStyles.card}>
@@ -181,20 +209,34 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
           ))}
         </View>
       </ScrollView>
+
+      {/* 広告バナー */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 // --- 言語設定画面 ---
 export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
+
   const langs = [
     { code: 'ja', label: '日本語' }, { code: 'en', label: 'English' }, { code: 'es', label: 'Español' },
     { code: 'ru', label: 'Русский' }, { code: 'de', label: 'Deutsch' }, { code: 'zh', label: '中文' }, { code: 'ko', label: '한국어' },
   ];
   return (
-    <View style={globalStyles.content}>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title="Language" onBack={onBack} />
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <View style={[localStyles.card, { marginTop: 20 }]}>
           {langs.map((l, idx) => (
             <TouchableOpacity 
@@ -208,12 +250,26 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
           ))}
         </View>
       </ScrollView>
+
+      {/* 広告バナー */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 // --- ヘルプ画面 ---
 export const HelpScreen = ({ t, onBack }: any) => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
+
   const items = [
     {icon:RefreshCw, color:'#a855f7', bg:'rgba(168, 85, 247, 0.1)', t:'faq_restore'}, 
     {icon: Info, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'help_faq_staking_title', descKey: 'help_faq_staking_answer'},
@@ -228,9 +284,9 @@ export const HelpScreen = ({ t, onBack }: any) => {
   ];
 
   return (
-    <View style={globalStyles.content}>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('help')} onBack={onBack} />
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <Text style={localStyles.sectionHeader}>FAQ & Support</Text>
         <View style={localStyles.card}>
           {items.map((it, i) => (
@@ -239,26 +295,38 @@ export const HelpScreen = ({ t, onBack }: any) => {
                   <View style={[localStyles.iconWrapper, {backgroundColor: it.bg, width: 32, height: 32, borderRadius: 8}]}>
                     <it.icon size={16} color={it.color} />
                   </View>
-                  {/* titleKey があればそれを使い、無ければ t を使う */}
                   <Text style={localStyles.helpTitle}>{t(it.titleKey || it.t)}</Text>
                </View>
-               {/* descKey があればそれを使い、無ければ t + '_desc' を使う */}
                <Text style={localStyles.helpDesc}>{t(it.descKey || (it.t ? it.t + '_desc' : ''))}</Text>
             </View>
           ))}
         </View>
       </ScrollView>
+
+      {/* 広告バナー */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 // --- アバウト画面 ---
 export const AboutScreen = ({ t, onBack }: any) => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
+
   const [modalVisible, setModalVisible] = useState(false);
   return (
-    <View style={globalStyles.content}>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
       <HeaderRow title={t('about')} onBack={onBack} />
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <View style={{alignItems:'center', marginVertical: 40}}>
           <View style={{width:100, height:100, borderRadius:24, backgroundColor:'#1a1a1a', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#333'}}>
              <Image source={require('../../assets/splash.png')} style={{width: 64, height: 64, borderRadius: 16}}/>
@@ -296,6 +364,13 @@ export const AboutScreen = ({ t, onBack }: any) => {
           </View>
         </View>
       </Modal>
+
+      {/* 広告バナー */}
+      {showBanner ? (
+        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -416,5 +491,17 @@ const localStyles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     paddingLeft: 44,
+  },
+
+  // ★ 追加：バナーを画面下に固定するスタイル
+  bannerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)',
   },
 });

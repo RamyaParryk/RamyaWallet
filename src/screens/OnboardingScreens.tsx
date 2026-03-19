@@ -11,6 +11,7 @@ import { SimpleAlertModal } from '../components/ActionModals';
 
 // --- スプラッシュ画面 ---
 export const SplashScreen = () => (
+  // ★ 修正: ここだけは元の美しいパープル（#2e1065）に戻します！
   <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#2e1065' }]}>
     <Image source={require('../../assets/splash.png')} style={{ width: '50%', height: undefined, aspectRatio: 1, resizeMode: 'contain' }} />
   </View>
@@ -18,7 +19,7 @@ export const SplashScreen = () => (
 
 // --- ウェルカム画面 ---
 export const WelcomeScreen = ({ t, onStart, onImport }: any) => (
-  <View style={styles.centerContent}>
+  <View style={[styles.centerContent, { backgroundColor: '#000' }]}>
     <View style={styles.logoBox}><Zap size={40} color="white" fill="white" /></View>
     <Text style={styles.title}>{t('welcome_title')}</Text>
     <Text style={styles.subtitle}>{t('welcome_subtitle')}</Text>
@@ -38,7 +39,6 @@ export const WelcomeScreen = ({ t, onStart, onImport }: any) => (
 export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
   const [mnemonic, setMnemonic] = useState('');
   const [loading, setLoading] = useState(false);
-  // ★ エラー用State
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const handleImport = async () => {
@@ -49,7 +49,6 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
 
     if (!cleanMnemonic) return;
     if (!validateMnemonic(cleanMnemonic)) {
-      // ★ Alert.alert -> SimpleAlertModal
       setAlert({ visible: true, title: t('error'), message: t('invalid_phrase') });
       return;
     }
@@ -60,36 +59,37 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <HeaderRow title={t('import_wallet')} onBack={onBack} />
-        
-        <Text style={styles.descText}>{t('import_phrase_desc')}</Text>
-        
-        <TextInput 
-          style={styles.mnemonicInput}
-          placeholder="apple banana cherry..."
-          placeholderTextColor="#555"
-          multiline numberOfLines={4}
-          value={mnemonic} onChangeText={setMnemonic}
-          autoCapitalize="none" autoCorrect={false}
-        />
-        <TouchableOpacity 
-          style={[styles.primaryButton, (!mnemonic || loading) && {backgroundColor:'#333'}]} 
-          onPress={handleImport} disabled={!mnemonic || loading}
-        >
-          {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.primaryButtonText}>{t('import_wallet')}</Text>}
-        </TouchableOpacity>
-      </ScrollView>
+    <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <HeaderRow title={t('import_wallet')} onBack={onBack} />
+      
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 }}>
+          <Text style={styles.descText}>{t('import_phrase_desc')}</Text>
+          
+          <TextInput 
+            style={styles.mnemonicInput}
+            placeholder="apple banana cherry..."
+            placeholderTextColor="#555"
+            multiline numberOfLines={4}
+            value={mnemonic} onChangeText={setMnemonic}
+            autoCapitalize="none" autoCorrect={false}
+          />
+          <TouchableOpacity 
+            style={[styles.primaryButton, (!mnemonic || loading) && {backgroundColor:'#333'}]} 
+            onPress={handleImport} disabled={!mnemonic || loading}
+          >
+            {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.primaryButtonText}>{t('import_wallet')}</Text>}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      {/* ★ モーダル配置 */}
       <SimpleAlertModal 
         visible={alert.visible}
         title={alert.title}
         message={alert.message}
         onClose={() => setAlert({ ...alert, visible: false })}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -97,8 +97,8 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
 export const LoadingScreen = ({ t, onFinish }: any) => {
   useEffect(() => { onFinish(); }, []);
   return (
-    <View style={styles.centerContent}>
-      <ActivityIndicator size="large" color="#9333ea" />
+    <View style={[styles.centerContent, { backgroundColor: '#000' }]}>
+      <ActivityIndicator size="large" color="#a855f7" />
       <Text style={styles.subtitle}>{t('loading_mnemonic')}</Text>
     </View>
   );
@@ -108,8 +108,8 @@ export const LoadingScreen = ({ t, onFinish }: any) => {
 export const CreateWalletScreen = ({ t, wallet, onConfirm }: any) => {
   const words = wallet?.mnemonic ? wallet.mnemonic.split(' ') : [];
   return (
-    <View style={styles.content}>
-      <Text style={styles.screenTitle}>{t('secret_phrase_title')}</Text>
+    <View style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
+      <Text style={[styles.screenTitle, { marginTop: 20 }]}>{t('secret_phrase_title')}</Text>
       
       <Text style={styles.descText}>{t('secret_phrase_desc')}</Text>
       

@@ -9,6 +9,7 @@ import {
   Modal,
   StyleSheet,
   ScrollView,
+  Platform, // ★ Platformを追加
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArrowDown, X, Search, Shield, BadgeCheck } from 'lucide-react-native';
@@ -23,10 +24,15 @@ import { parseSolanaError } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 
-// ★ 追加: どこからでも資産を更新できるサービスをインポート
+// どこからでも資産を更新できるサービスをインポート
 import { refreshAssetsService } from '../services/refreshAssets';
 
+// ★ 追加: 広告用のインポート
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+
 const BAD_MINTS_KEY = 'ramya_bad_icon_mints_v1';
+const BANNER_ESTIMATED_HEIGHT = 60; // ★ 広告の高さ
 
 const shortenAddress = (address: string, chars = 4) => {
   if (!address) return '';
@@ -69,6 +75,13 @@ export const SwapScreen = ({
   tokenBalances,
 }: any) => {
   const [badMints, setBadMints] = useState<Set<string>>(new Set());
+
+  // ★ 広告の表示判定
+  const adUnitId = useMemo(() => {
+    if (Platform.OS !== 'android') return '';
+    return (ADMOB_ANDROID_ENV || '').trim();
+  }, []);
+  const showBanner = adUnitId.length > 0;
 
   useEffect(() => {
     (async () => {
@@ -234,7 +247,6 @@ export const SwapScreen = ({
       setQuote(null);
       if (onRetryFetch) onRetryFetch();
 
-      // ★ ここが重要！スワップ成功後に自動で残高をバックグラウンド更新する
       refreshAssetsService({ force: true });
 
     } catch (e: any) {
@@ -265,7 +277,13 @@ export const SwapScreen = ({
     <View style={localStyles.container}>
       <Text style={localStyles.screenTitle}>{t('swap')}</Text>
 
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={[
+          localStyles.scrollContent, 
+          // ★ 広告がある場合は一番下までスクロールできるように余白を広げる
+          { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }
+        ]}
+      >
         <View style={localStyles.card}>
           <View style={localStyles.cardHeader}>
             <Text style={localStyles.cardLabel}>{t('pay')}</Text>
@@ -503,14 +521,21 @@ export const SwapScreen = ({
         message={alert.message}
         onClose={() => setAlert({ ...alert, visible: false })}
       />
+
+      {/* ★ 広告バナーを最下部に固定表示 */}
+      {showBanner ? (
+        <View style={localStyles.bannerContainer}>
+          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+        </View>
+      ) : null}
     </View>
   );
 };
 
 const localStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111', paddingTop: 10 },
+  container: { flex: 1, backgroundColor: '#000', paddingTop: 10 },
   screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 20 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 16 },
   card: { backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: '#333' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   cardLabel: { color: '#aaa', fontSize: 14, fontWeight: '600' },
@@ -544,4 +569,15 @@ const localStyles = StyleSheet.create({
   tokenBalanceText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   verifiedBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.15)', marginHorizontal: 16, marginBottom: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
   verifiedText: { color: '#60a5fa', fontSize: 12, fontWeight: '600', flex: 1 },
+  // ★ 広告用のスタイルを追加
+  bannerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0, // 下のタブバーの上にピッタリ乗ります
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    backgroundColor: '#000', // 画面の背景と同じ色にする
+  },
 });

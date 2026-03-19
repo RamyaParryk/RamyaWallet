@@ -10,7 +10,6 @@ import { SimpleAlertModal } from '../components/ActionModals';
 export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLogout }: any) => {
   const [pin, setPin] = useState('');
   const rnBiometrics = new ReactNativeBiometrics();
-  // ★ エラー用State
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   useEffect(() => {
@@ -34,7 +33,6 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
         if (newPin === correctPin) {
           setTimeout(onUnlock, 100);
         } else {
-          // ★ Alert.alert を変更
           setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
         }
       }
@@ -42,7 +40,8 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
   };
 
   return (
-    <View style={styles.pinContainer}>
+    // ★ 修正: 背景を #000 に強制上書きしてフラッシュを防止
+    <View style={[styles.pinContainer, { backgroundColor: '#000' }]}>
       <Text style={styles.pinTitle}>{t('welcome_back')}</Text>
       <Text style={styles.pinDesc}>{t('enter_pin')}</Text>
       <View style={styles.pinDots}>
@@ -73,7 +72,6 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
         <Text style={{color: '#666'}}>{t('logout_reset')}</Text>
       </TouchableOpacity>
 
-      {/* ★ モーダル配置 */}
       <SimpleAlertModal 
         visible={alert.visible}
         title={alert.title}
@@ -89,7 +87,6 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
   const [step, setStep] = useState<'create' | 'confirm'>('create');
   const [pin, setPin] = useState('');
   const [firstPin, setFirstPin] = useState('');
-  // ★ エラー用State
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const handlePress = (num: string) => {
@@ -111,14 +108,14 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
       if (inputPin === firstPin) {
         onSuccess(inputPin);
       } else {
-        // ★ Alert.alert を変更
         setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
       }
     }
   };
 
   return (
-    <View style={styles.pinContainer}>
+    // ★ 修正: 背景を #000 に強制上書きしてフラッシュを防止
+    <View style={[styles.pinContainer, { backgroundColor: '#000' }]}>
       <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
         <X size={24} color="#fff" />
       </TouchableOpacity>
@@ -143,14 +140,12 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* ★ モーダル配置 */}
       <SimpleAlertModal 
         visible={alert.visible}
         title={alert.title}
         message={alert.message}
         onClose={() => { 
           setAlert({ ...alert, visible: false }); 
-          // エラー後は最初から入力させる
           setStep('create'); setPin(''); setFirstPin(''); 
         }}
       />
