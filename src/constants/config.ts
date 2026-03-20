@@ -5,6 +5,8 @@ import {
   REFERRAL_ACCOUNT_PUBKEY,
   ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV,
   COIN_GENKO_API_KEY as ENV_CG_KEY,
+  MORALIS_API_KEY as MORALIS_ENV,
+  ZERION_API_KEY as ZERION_ENV,
 } from '@env';
 
 // API Keys
@@ -12,6 +14,8 @@ export const JUPITER_API_KEY = JUP_ENV || '';
 export const HELIUS_API_KEY  = HELIUS_ENV || '';
 export const MY_FEE_ACCOUNT = REFERRAL_ACCOUNT_PUBKEY || '';
 export const COIN_GENKO_API_KEY = ENV_CG_KEY || '';
+export const MORALIS_API_KEY = MORALIS_ENV || '';
+export const ZERION_API_KEY = ZERION_ENV || '';
 
 // RPC
 export const MAINNET_RPC_URL = HELIUS_API_KEY 

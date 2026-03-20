@@ -11,13 +11,6 @@ declare module '@solana-mobile/seed-vault-lib' {
   };
 }
 
-// 環境変数
-declare module '@env' {
-  export const JUPITER_BASE_PATH: string;
-  export const MY_FEE_ACCOUNT: string;
-  export const MY_PLATFORM_FEE_BPS: string;
-}
-
 // 画像ファイル
 declare module '*.png';
 declare module '*.jpg';
