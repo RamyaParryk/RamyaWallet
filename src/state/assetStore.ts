@@ -10,6 +10,9 @@ export interface Asset {
   value?: number;
   logoURI: string;
   status?: 'verified' | 'unknown' | 'suspicious';
+  description?: string;
+  isToken2022?: boolean; 
+  possibleSpam?: boolean;
 }
 
 interface AssetState {

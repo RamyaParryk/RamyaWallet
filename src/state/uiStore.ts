@@ -4,7 +4,7 @@ export type Screen =
   | 'splash' | 'welcome' | 'loading' | 'create' | 'import' | 'unlock' | 'main'
   | 'receive' | 'send' | 'history' | 'stake' | 'address_book'
   | 'settings_security' | 'settings_network' | 'settings_help' | 'settings_about'
-  | 'settings_lang' | 'pin_setup';
+  | 'settings_lang' | 'pin_setup' | 'asset-detail' | 'swap_standalone';
 
 export type Tab = 'home' | 'swap' | 'history' | 'settings';
 

@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator, ImageBackground, DeviceEventEmitter, StyleSheet } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
 import { Keypair } from '@solana/web3.js';
@@ -17,6 +17,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
 import { SOL_MINT } from './src/constants/config';
+import { HeaderRow } from './src/components/HeaderRow'; // ★ 追加
 
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -58,23 +59,15 @@ import * as secureStorage from './src/storage/secureStorage';
 import { refreshAssetsService } from './src/services/refreshAssets';
 import { warmupNetwork } from './src/services/jupiterService';
 
-// ★ ちらつき防止アニメーションのコア
 import { LayoutAnimation, UIManager, Platform } from 'react-native';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const NavButton = ({
-  icon: Icon,
-  label,
-  active,
-  onPress,
-}: {
-  icon: any;
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) => (
+import { AssetDetailScreen } from './src/screens/AssetDetailScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const NavButton = ({ icon: Icon, label, active, onPress }: { icon: any; label: string; active: boolean; onPress: () => void; }) => (
   <TouchableOpacity onPress={onPress} style={styles.navBtn}>
     <Icon size={24} color={active ? '#a855f7' : '#666'} />
     <Text style={[styles.navText, active && { color: '#a855f7' }]}>{label}</Text>
@@ -142,11 +135,33 @@ export default function App() {
   const [bootSyncDone, setBootSyncDone] = useState(false);
   const bootSyncStartedRef = useRef(false);
 
-  // ★ 画面遷移を滑らかにする魔法の関数
+  const [navigationParams, setNavigationParams] = useState<any>({});
+  const [skinUri, setSkinUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSkin = async () => {
+      try {
+        const savedSkin = await AsyncStorage.getItem('wallet_skin');
+        if (savedSkin) setSkinUri(savedSkin);
+      } catch (e) {}
+    };
+    loadSkin();
+
+    const subscription = DeviceEventEmitter.addListener('skinChanged', (uri: string) => {
+      setSkinUri(uri);
+    });
+    return () => subscription.remove();
+  }, []);
+
   const animatedSetScreen = useCallback((screen: any) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setScreen(screen);
   }, [setScreen]);
+
+  const handleNavigate = useCallback((screen: any, params?: any) => {
+    setNavigationParams(params || {});
+    animatedSetScreen(screen);
+  }, [animatedSetScreen]);
 
   useEffect(() => {
     if (currentScreen === 'welcome' || currentScreen === 'import' || currentScreen === 'loading' || currentScreen === 'create') {
@@ -157,9 +172,10 @@ export default function App() {
 
   useEffect(() => {
     const backAction = () => {
-      const subScreens = ['settings_security', 'settings_network', 'settings_help', 'settings_about', 'settings_lang', 'pin_setup', 'import', 'address_book', 'stake', 'receive', 'send'];
+      const subScreens = ['settings_security', 'settings_network', 'settings_help', 'settings_about', 'settings_lang', 'pin_setup', 'import', 'address_book', 'stake', 'receive', 'send', 'asset-detail', 'swap_standalone'];
       if ((currentScreen as string).startsWith('settings_') || subScreens.includes(currentScreen as any)) {
         if (currentScreen === 'import') animatedSetScreen('welcome');
+        else if (currentScreen === 'swap_standalone') animatedSetScreen('asset-detail');
         else animatedSetScreen('main');
         return true;
       }
@@ -216,7 +232,6 @@ export default function App() {
       if (hasWallet) {
         setBootSyncDone(false);
         bootSyncStartedRef.current = false;
-        // ※起動時のみアニメーションなしで直行する
         if (storedPin) setScreen('unlock');
         else setScreen('main');
       } else {
@@ -318,9 +333,43 @@ export default function App() {
       case 'unlock': return <UnlockScreen t={t} correctPin={pin} biometricsEnabled={biometricsEnabled} onUnlock={() => { setBootSyncDone(false); bootSyncStartedRef.current = false; animatedSetScreen('main'); }} onLogout={handleLogout} />;
       case 'main':
         if (!bootSyncDone) return <BootLoading title={t('processing')} />;
-        return <MainScreen t={t} activeTab={activeTab} setActiveTab={setTab} wallet={wallet} assets={assets} totalValue={totalValue} onRefresh={() => refreshAssets(true)} tokenList={tokenList} network={network} connection={connection} onRetryFetchTokens={fetchTokens} notify={showNotification} onNavigate={animatedSetScreen} onLogout={handleLogout} contacts={contacts} />;
+        return <MainScreen t={t} activeTab={activeTab} setActiveTab={setTab} wallet={wallet} assets={assets} totalValue={totalValue} onRefresh={() => refreshAssets(true)} tokenList={tokenList} network={network} connection={connection} onRetryFetchTokens={fetchTokens} notify={showNotification} onNavigate={handleNavigate} onLogout={handleLogout} contacts={contacts} />;
       case 'receive': return <ReceiveScreen t={t} wallet={wallet} onBack={() => animatedSetScreen('main')} notify={showNotification} />;
-      case 'send': return <SendScreen t={t} wallet={wallet} connection={connection} contacts={contacts} onBack={() => animatedSetScreen('main')} notify={showNotification} />;
+      
+      // ★ 戻った時に真っ暗にならないよう、確実な判定を追加
+      case 'send': 
+        return <SendScreen 
+          t={t} 
+          wallet={wallet} 
+          connection={connection} 
+          contacts={contacts} 
+          onBack={() => {
+            if (navigationParams?.asset || navigationParams?.preSelectedAsset) {
+              animatedSetScreen('asset-detail');
+            } else {
+              animatedSetScreen('main');
+            }
+          }} 
+          notify={showNotification} 
+          preSelectedAsset={navigationParams?.preSelectedAsset || navigationParams?.asset} 
+        />;
+      
+      // ★ 詳細画面から戻るボタン付きでスワップ画面を開く専用ルートを追加！
+        case 'swap_standalone': {
+        const solBal = assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0;
+        const tBals: any = {};
+        assets.forEach((a: any) => { tBals[a.mint] = a.amount; });
+        return (
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            {/* ★ 修正: titleを空文字にして二重表示を防ぐ。戻るボタン（onBack）だけ機能させる */}
+            <HeaderRow title="" onBack={() => animatedSetScreen('asset-detail')} />
+            <View style={{ flex: 1, marginTop: -20 }}>
+              <SwapScreen t={t} wallet={wallet} connection={connection} tokenList={tokenList} notify={showNotification} onRetryFetch={fetchTokens} solBalance={solBal} tokenBalances={tBals} preSelectedAsset={navigationParams?.asset} />
+            </View>
+          </View>
+        );
+      }
+
       case 'history': return <HistoryScreen t={t} connection={connection} address={wallet?.address} onBack={() => animatedSetScreen('main')} />;
       case 'stake': return <StakingScreen t={t} wallet={wallet} connection={connection} notify={showNotification} onBack={() => animatedSetScreen('main')} solBalance={assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0} />;
       case 'settings_security': return <SecuritySettingsScreen t={t} wallet={wallet} biometrics={biometricsEnabled} setBiometrics={async (en: boolean) => { setBiometricsEnabled(en); await persistSettings({ biometricsEnabled: en }); }} hasPin={!!pin} onSetupPin={() => { setPendingBioEnable(false); animatedSetScreen('pin_setup'); }} onBack={() => animatedSetScreen('main')} />;
@@ -330,19 +379,36 @@ export default function App() {
       case 'settings_lang': return <LanguageScreen onBack={() => animatedSetScreen('main')} onChange={changeLanguage} currentLang={lang} />;
       case 'pin_setup': return <PinSetupScreen t={t} onSuccess={handlePinSet} onCancel={() => { setPendingBioEnable(false); animatedSetScreen('settings_security'); }} />;
       case 'settings_network': return <NetworkSettingsScreen t={t} currentNetwork={network} setNetwork={async (net: any) => { setNetwork(net); await persistSettings({ network: net }); }} currentRpc={rpcEndpoint} setRpc={setRpcEndpoint} onBack={() => animatedSetScreen('main')} />;
+      
+      // ★ 修正3: 戻った時に参照する asset が undefined（真っ暗）にならないよう、フォールバックを追加
+      case 'asset-detail': 
+        return <AssetDetailScreen
+          t={t}
+          asset={navigationParams?.asset || navigationParams?.preSelectedAsset} 
+          onBack={() => animatedSetScreen('main')} 
+          onNavigate={handleNavigate} 
+        />;
+
       default: return null;
     }
   };
 
   return (
     <SafeAreaProvider>
-      {/* ★ 大枠の背景色を黒に固定してフラッシュを防止 */}
-      <SafeAreaView style={[styles.container, { backgroundColor: '#000' }]}>
-        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-        {notification && <View style={styles.notification}><Text style={styles.notificationText}>{notification}</Text></View>}
-        {renderScreen()}
-        <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />
-      </SafeAreaView>
+      <ImageBackground 
+        source={skinUri ? { uri: skinUri } : undefined} 
+        style={{ flex: 1, backgroundColor: '#000' }}
+        resizeMode="cover"
+      >
+        {skinUri && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.75)' }]} />}
+        
+        <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]}>
+          <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+          {notification && <View style={styles.notification}><Text style={styles.notificationText}>{notification}</Text></View>}
+          {renderScreen()}
+          <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />
+        </SafeAreaView>
+      </ImageBackground>
     </SafeAreaProvider>
   );
 }
@@ -356,7 +422,6 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
 
   const solBalance = assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0;
 
-  // ★ タブ切り替え時も滑らかにアニメーションする魔法
   const animatedSetTab = useCallback((tab: string) => {
     if (activeTab !== tab) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -365,8 +430,7 @@ const MainScreen = ({ t, activeTab, setActiveTab, onNavigate, onLogout, onRetryF
   }, [activeTab, setActiveTab]);
 
   return (
-<View style={{ flex: 1, backgroundColor: '#000' }}>
-      {/* ★ MainScreenの大枠も背景色を黒に固定 */}
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={{ flex: 1 }}>
         {activeTab === 'home' && <DashboardScreen t={t} onNav={animatedSetTab} onNavigate={onNavigate} wallet={wallet} assets={assets} {...props} />}
         {activeTab === 'swap' && <SwapScreen t={t} wallet={wallet} connection={connection} tokenList={props.tokenList} notify={props.notify} onRetryFetch={onRetryFetchTokens} solBalance={solBalance} tokenBalances={tokenBalances} />}

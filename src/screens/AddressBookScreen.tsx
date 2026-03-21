@@ -64,7 +64,7 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
 
   return (
     // ★ styles.content を外し、他の画面と同じように高さを完璧に揃えます
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow 
         title={t('address_book')} 
         onBack={onBack} 

@@ -533,7 +533,7 @@ export const SwapScreen = ({
 };
 
 const localStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 10 },
+  container: { flex: 1, backgroundColor: 'transparent', paddingTop: 10 },
   screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 20 },
   scrollContent: { paddingHorizontal: 16 },
   card: { backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: '#333' },
@@ -578,6 +578,6 @@ const localStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingTop: 8,
-    backgroundColor: '#000', // 画面の背景と同じ色にする
+    backgroundColor: 'transparent', // 画面の背景と同じ色にする
   },
 });

@@ -125,7 +125,7 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
 
   return (
     // ★ 修正: styles.content を外す
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('staking_btn')} onBack={onBack} />
 
       <ScrollView 

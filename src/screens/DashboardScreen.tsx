@@ -9,7 +9,6 @@ import { SelectionModal } from '../components/ActionModals';
 
 const { width } = Dimensions.get('window');
 
-// --- ローカル用サブコンポーネント ---
 const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) => (
   <TouchableOpacity onPress={onPress} style={{ alignItems: 'center', gap: 5 }}>
     <View style={[styles.actionCircle, { backgroundColor: color }]}>
@@ -19,15 +18,20 @@ const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) =>
   </TouchableOpacity>
 );
 
-type AssetItemProps = { mint: string; symbol: string; name: string; amount: number; price: number; logoURI?: string; status?: 'verified' | 'unknown' | 'suspicious'; decimals?: number; };
+type AssetItemProps = { asset: any; onNavigate: any; };
 
-// ★ 通常の資産リスト用コンポーネント
-const AssetItem: React.FC<AssetItemProps> = ({ mint, symbol, name, amount, price, logoURI, status }) => {
+// ★ 変更: AssetItemをただのViewからTouchableOpacityに変更し、タップ可能に！
+const AssetItem: React.FC<AssetItemProps> = ({ asset, onNavigate }) => {
+  const { mint, symbol, name, amount, price, logoURI, status } = asset;
   if (status === 'suspicious') return null;
   const isUnknown = status === 'unknown';
 
   return (
-    <View style={[styles.assetRow, isUnknown && { opacity: 0.6 }]}>
+    <TouchableOpacity 
+      style={[styles.assetRow, isUnknown && { opacity: 0.6 }]}
+      onPress={() => onNavigate('asset-detail', { asset })}
+      activeOpacity={0.7}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <TokenIcon uri={logoURI} symbol={symbol} mint={mint} size={40} />
         <View>
@@ -53,12 +57,11 @@ const AssetItem: React.FC<AssetItemProps> = ({ mint, symbol, name, amount, price
         </Text>
         <Text style={{ color: '#666', fontSize: 14 }}>@ ${(price || 0).toLocaleString()}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-// ★ ステーキング用の横スクロールカード
-const StakedAssetCard = ({ asset }: { asset: AssetItemProps }) => (
+const StakedAssetCard = ({ asset }: { asset: any }) => (
   <View style={localStyles.stakedCard}>
     <View style={localStyles.stakedHeader}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -76,9 +79,12 @@ const StakedAssetCard = ({ asset }: { asset: AssetItemProps }) => (
   </View>
 );
 
-// ★ NFT用のカード型コンポーネント
-const NftCard = ({ asset }: { asset: AssetItemProps }) => (
-  <TouchableOpacity style={localStyles.nftCard} activeOpacity={0.8}>
+const NftCard = ({ asset, onNavigate }: { asset: any, onNavigate: any }) => (
+  <TouchableOpacity 
+    style={localStyles.nftCard} 
+    activeOpacity={0.8}
+    onPress={() => onNavigate('asset-detail', { asset })}
+  >
     <View style={localStyles.nftImageContainer}>
       {asset.logoURI ? (
         <Image source={{ uri: asset.logoURI }} style={localStyles.nftImage} resizeMode="cover" />
@@ -95,12 +101,17 @@ const NftCard = ({ asset }: { asset: AssetItemProps }) => (
   </TouchableOpacity>
 );
 
-// --- メインコンポーネント ---
+let lastActiveTab: 'tokens' | 'nfts' = 'tokens';
+
 export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, onRefresh, onNavigate }: any) => {
   const [buyModalVisible, setBuyModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
+  const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>(lastActiveTab);
 
-  // ★ 資産の分類 (decimals === 0 をNFTとみなす)
+  const switchTab = (tab: 'tokens' | 'nfts') => {
+    setActiveTab(tab);
+    lastActiveTab = tab;
+  };
+
   const stakedAssets = assets?.filter((a: any) => a.mint === 'native-stake') || [];
   const liquidAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals > 0) || [];
   const nftAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals === 0) || [];
@@ -158,23 +169,21 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
         </View>
       )}
 
-      {/* ★ タブ切り替えUI */}
       <View style={localStyles.tabContainer}>
         <TouchableOpacity 
           style={[localStyles.tabButton, activeTab === 'tokens' && localStyles.activeTab]} 
-          onPress={() => setActiveTab('tokens')}
+          onPress={() => switchTab('tokens')}
         >
           <Text style={[localStyles.tabText, activeTab === 'tokens' && localStyles.activeTabText]}>Tokens</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[localStyles.tabButton, activeTab === 'nfts' && localStyles.activeTab]} 
-          onPress={() => setActiveTab('nfts')}
+          onPress={() => switchTab('nfts')}
         >
           <Text style={[localStyles.tabText, activeTab === 'nfts' && localStyles.activeTabText]}>NFTs ({nftAssets.length})</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ★ タブの中身の切り替え */}
       {activeTab === 'tokens' ? (
         <View style={styles.assetsCard}>
           <View style={styles.assetsHeader}>
@@ -188,18 +197,17 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
             <Text style={{ color: '#666', textAlign: 'center', marginTop: 20 }}>{t('no_assets')}</Text>
           ) : (
             liquidAssets.map((asset: any) => (
-              <AssetItem key={asset.mint} {...asset} />
+              <AssetItem key={asset.mint} asset={asset} onNavigate={onNavigate} />
             ))
           )}
         </View>
       ) : (
-        /* NFTのグリッド表示 */
         <View style={localStyles.nftGrid}>
           {(!nftAssets || nftAssets.length === 0) ? (
             <Text style={{ color: '#666', textAlign: 'center', width: '100%', marginTop: 40 }}>No NFTs found</Text>
           ) : (
             nftAssets.map((asset: any) => (
-              <NftCard key={asset.mint} asset={asset} />
+              <NftCard key={asset.mint} asset={asset} onNavigate={onNavigate} />
             ))
           )}
         </View>
@@ -219,7 +227,6 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
   );
 };
 
-// ★ 専用スタイル
 const localStyles = StyleSheet.create({
   stakedContainer: { marginTop: 10, marginBottom: 10 },
   stakedTitle: { fontSize: 16, fontWeight: 'bold', color: '#aaa', marginBottom: 12 },
@@ -229,17 +236,15 @@ const localStyles = StyleSheet.create({
   stakedAmount: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   stakedValue: { color: '#22c55e', fontSize: 13, marginTop: 4, fontWeight: '600' },
   
-  // タブ用スタイル
   tabContainer: { flexDirection: 'row', backgroundColor: '#111', borderRadius: 12, padding: 4, marginVertical: 16 },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   activeTab: { backgroundColor: '#2a2a2a' },
   tabText: { color: '#888', fontWeight: 'bold', fontSize: 15 },
   activeTabText: { color: '#fff' },
 
-  // NFTグリッド用スタイル
   nftGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
   nftCard: { 
-    width: (width - 40 - 12) / 2, // 画面幅から余白を引いて2等分
+    width: (width - 40 - 12) / 2,
     backgroundColor: '#1a1a1a', 
     borderRadius: 16, 
     borderWidth: 1, 

@@ -152,7 +152,7 @@ export function SettingsScreen({ t, onNavigate, onLogout }: Props) {
 
 // ★ モダンUI専用のスタイル
 const localStyles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
+  root: { flex: 1, backgroundColor: 'transparent' },
   container: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 16,

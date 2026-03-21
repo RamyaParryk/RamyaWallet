@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet, Platform } from 'react-native';
-import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server } from 'lucide-react-native';
+import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server, Image as ImageIcon } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles as globalStyles } from '../styles/globalStyles';
@@ -10,7 +10,7 @@ import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 
-// ★ 広告と安全領域用のインポートを追加
+// 広告と安全領域用のインポート
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
@@ -48,7 +48,6 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
 
   const wordCount = wallet?.mnemonic ? wallet.mnemonic.trim().split(/\s+/).length : 0;
 
-  // 広告の表示判定
   const adUnitId = useMemo(() => {
     if (Platform.OS !== 'android') return '';
     return (ADMOB_ANDROID_ENV || '').trim();
@@ -86,7 +85,7 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('security')} onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         
@@ -143,7 +142,6 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
         <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={confirm.confirmText} cancelText={t('cancel')} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
       </ScrollView>
 
-      {/* 広告バナー */}
       {showBanner ? (
         <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -166,7 +164,7 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
   const rpcs = [{ id: 'Public', name: 'Public Node' }, { id: 'Helius', name: 'Helius RPC' }, { id: 'QuickNode', name: 'QuickNode RPC' }];
   
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('network')} onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         
@@ -210,7 +208,6 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
         </View>
       </ScrollView>
 
-      {/* 広告バナー */}
       {showBanner ? (
         <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -234,7 +231,7 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
     { code: 'ru', label: 'Русский' }, { code: 'de', label: 'Deutsch' }, { code: 'zh', label: '中文' }, { code: 'ko', label: '한국어' },
   ];
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title="Language" onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <View style={[localStyles.card, { marginTop: 20 }]}>
@@ -251,7 +248,6 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
         </View>
       </ScrollView>
 
-      {/* 広告バナー */}
       {showBanner ? (
         <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -270,11 +266,13 @@ export const HelpScreen = ({ t, onBack }: any) => {
   }, []);
   const showBanner = adUnitId.length > 0;
 
+  // ★ ここでFAQの並び順を整理
   const items = [
     {icon:RefreshCw, color:'#a855f7', bg:'rgba(168, 85, 247, 0.1)', t:'faq_restore'}, 
-    {icon: Info, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'help_faq_staking_title', descKey: 'help_faq_staking_answer'},
     {icon:TrendingUp, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_stake'},
     {icon:Percent, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_apy'}, 
+    {icon: Info, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'help_faq_staking_title', descKey: 'help_faq_staking_answer'},
+    {icon: ImageIcon, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', titleKey: 'faq_nft_send_title', descKey: 'faq_nft_send_desc'},
     {icon:Zap, color:'#eab308', bg:'rgba(234, 179, 8, 0.1)', t:'faq_fee'},
     {icon:ShieldCheck, color:'#ef4444', bg:'rgba(239, 68, 68, 0.1)', t:'faq_device'}, 
     {icon:Wallet, color:'#3b82f6', bg:'rgba(59, 130, 246, 0.1)', t:'faq_bank'},
@@ -284,7 +282,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('help')} onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <Text style={localStyles.sectionHeader}>FAQ & Support</Text>
@@ -303,7 +301,6 @@ export const HelpScreen = ({ t, onBack }: any) => {
         </View>
       </ScrollView>
 
-      {/* 広告バナー */}
       {showBanner ? (
         <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -324,7 +321,7 @@ export const AboutScreen = ({ t, onBack }: any) => {
 
   const [modalVisible, setModalVisible] = useState(false);
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('about')} onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <View style={{alignItems:'center', marginVertical: 40}}>
@@ -365,7 +362,6 @@ export const AboutScreen = ({ t, onBack }: any) => {
         </View>
       </Modal>
 
-      {/* 広告バナー */}
       {showBanner ? (
         <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -493,7 +489,6 @@ const localStyles = StyleSheet.create({
     paddingLeft: 44,
   },
 
-  // ★ 追加：バナーを画面下に固定するスタイル
   bannerContainer: {
     position: 'absolute',
     left: 0,

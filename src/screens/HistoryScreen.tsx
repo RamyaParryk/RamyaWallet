@@ -111,8 +111,8 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
   };
 
   return (
-    // ★ 修正: styles.content を外し、他画面とヘッダー高さを完璧に合わせる
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    // ★ 修正: backgroundColor を 'transparent' に明示的に設定！
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <Text style={localStyles.screenTitle}>{t('history') || 'Transaction History'}</Text>
       
       {loading ? (
@@ -190,7 +190,8 @@ const localStyles = StyleSheet.create({
   txCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    // ★ 修正: #1a1a1a から 85%の半透明な黒 に変更してすりガラス風に！
+    backgroundColor: 'rgba(26, 26, 26, 0.85)',
     padding: 16,
     borderRadius: 16,
     marginBottom: 12,

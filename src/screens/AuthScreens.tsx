@@ -40,8 +40,7 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
   };
 
   return (
-    // ★ 修正: 背景を #000 に強制上書きしてフラッシュを防止
-    <View style={[styles.pinContainer, { backgroundColor: '#000' }]}>
+    <View style={[styles.pinContainer, { backgroundColor: 'transparent' }]}>
       <Text style={styles.pinTitle}>{t('welcome_back')}</Text>
       <Text style={styles.pinDesc}>{t('enter_pin')}</Text>
       <View style={styles.pinDots}>
@@ -114,8 +113,7 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
   };
 
   return (
-    // ★ 修正: 背景を #000 に強制上書きしてフラッシュを防止
-    <View style={[styles.pinContainer, { backgroundColor: '#000' }]}>
+    <View style={[styles.pinContainer, { backgroundColor: 'transparent' }]}>
       <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
         <X size={24} color="#fff" />
       </TouchableOpacity>
