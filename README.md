@@ -2,10 +2,10 @@
 
 **🇺🇸 English Version** | **[🇯🇵 日本語版](./README_JP.md)**
 
-**Secure, Fast, Simple Solana Wallet built with React Native.**
+**Secure, Blazing Fast, Simple Solana Wallet built with React Native.**
 
 RamyaWallet is a non-custodial cryptocurrency wallet designed for the Solana blockchain.
-We prioritize user privacy and security.
+We prioritize user privacy, ultimate speed, and security.
 
 🔗 **Official Website:** [https://RamyaParryk.github.io/RamyaWallet/](https://RamyaParryk.github.io/RamyaWallet/)
 
@@ -13,7 +13,8 @@ We prioritize user privacy and security.
 
 ## 🚀 Features
 
-* **⭐ Official Meme Tokens:** Discover our official community tokens **RamyaParryk (RMYP)** and **K-Car (KCAR)** directly within the app. (Currently traded on **pump.fun**)
+* **⚡ Blazing Fast & Lightweight:** Optimized for speed by removing heavy, unstable chart dependencies. Enjoy instant portfolio loading, sending, and swapping without any API limits or lag.
+* **🔥 Ultimate Burn Tool:** Easily clean up your wallet! Burn annoying spam NFTs or empty token accounts to reclaim your SOL storage rent safely (includes clear warnings for unsupported cNFTs).
 * **🔄 Secure Swap:** Powered by Jupiter Aggregator.
     * **Pay With (From):** Supports swapping **from** any token supported by Jupiter.
     * **Receive (To):** For enhanced security, swaps are limited **to a strictly verified list of 44 selected tokens**.
