@@ -45,7 +45,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   const showBurnButton = !isNative && (asset.possibleSpam || !isToken || isEmpty || (!isMajor && assetValue < 0.1));
   const showSkinButton = !isToken;
 
-  // ★ 修正：説明文の取得ロジック（NFTとトークンで分岐）
+  // ★ 説明文の取得ロジック（NFTとトークンで分岐）
   useEffect(() => {
     const fetchDescription = async () => {
       // 1. NFTの場合は、すでにassetに入っているdescriptionをそのまま使う
