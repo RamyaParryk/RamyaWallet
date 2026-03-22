@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, DeviceEventEmitter } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, DeviceEventEmitter, ActivityIndicator } from 'react-native';
 import { ChevronLeft, AlertTriangle, Image as ImageIcon, Flame, RefreshCw, ArrowUpRight, Trash2 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,6 +29,10 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // 説明文（About）用のステート
+  const [description, setDescription] = useState<string | null>(null);
+  const [descLoading, setDescLoading] = useState(false);
+
   if (!asset) return null;
 
   const isToken = asset.decimals > 0 && asset.mint !== 'native-stake';
@@ -36,12 +40,49 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   const isNative = asset.mint === SOL_MINT || asset.mint === 'native-stake';
   const isMajor = MAJOR_TOKENS.includes(asset.mint);
   const isEmpty = asset.amount === 0;
-
-  // ★ NFT判定
   const isNFT = asset.decimals === 0 && asset.amount === 1;
 
   const showBurnButton = !isNative && (asset.possibleSpam || !isToken || isEmpty || (!isMajor && assetValue < 0.1));
   const showSkinButton = !isToken;
+
+  // ★ 修正：説明文の取得ロジック（NFTとトークンで分岐）
+  useEffect(() => {
+    const fetchDescription = async () => {
+      // 1. NFTの場合は、すでにassetに入っているdescriptionをそのまま使う
+      if (isNFT) {
+        if (asset.description) {
+          setDescription(asset.description);
+        }
+        return;
+      }
+
+      // 2. トークンの場合はJupiter APIから取得する
+      if (isToken) {
+        try {
+          setDescLoading(true);
+          setDescription(null);
+
+          const actualMint = asset.mint === 'native' || asset.mint === SOL_MINT 
+            ? 'So11111111111111111111111111111111111111112' 
+            : asset.mint;
+
+          const res = await fetch(`https://tokens.jup.ag/token/${actualMint}`);
+          if (!res.ok) throw new Error("Metadata API Error");
+
+          const json = await res.json();
+          if (json && json.summary) {
+            setDescription(json.summary.trim());
+          }
+        } catch (error) {
+          console.log("[DESC DEBUG] Fetch error:", error);
+        } finally {
+          setDescLoading(false);
+        }
+      }
+    };
+
+    fetchDescription();
+  }, [asset.mint, isToken, isNFT, asset.description]);
 
   const handleSetSkin = async () => {
     if (asset.logoURI) {
@@ -53,7 +94,6 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
     }
   };
 
-  // 🔥 [BURN] スパム対応・最強無差別Burnロジック（そのままキープ！）
   const handleBurn = async () => {
     if (!wallet || !connection) return;
     setBurnConfirm(false);
@@ -65,13 +105,10 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       const mintPubkey = new PublicKey(asset.mint);
       
       const mintInfo = await connection.getAccountInfo(mintPubkey);
-      if (!mintInfo) {
-        throw new Error("CNFT_UNSUPPORTED");
-      }
+      if (!mintInfo) throw new Error("CNFT_UNSUPPORTED");
+      
       const programId = mintInfo.owner;
-
       const tokenAccount = await getAssociatedTokenAddress(mintPubkey, userPubkey, false, programId);
-
       const tx = new Transaction();
 
       tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 100_000 }));
@@ -83,14 +120,8 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       if (rawAmount > 0) {
         if (isNFT) {
           const METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
-          const [metadataPDA] = PublicKey.findProgramAddressSync(
-            [Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()],
-            METADATA_PROGRAM_ID
-          );
-          const [editionPDA] = PublicKey.findProgramAddressSync(
-            [Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer(), Buffer.from("edition")],
-            METADATA_PROGRAM_ID
-          );
+          const [metadataPDA] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()], METADATA_PROGRAM_ID);
+          const [editionPDA] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer(), Buffer.from("edition")], METADATA_PROGRAM_ID);
 
           tx.add(
             createBurnNftInstruction({
@@ -117,10 +148,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       const signature = await connection.sendTransaction(tx, [keypair]);
       
       const confirmation = await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error(JSON.stringify(confirmation.value.err));
-      }
+      if (confirmation.value.err) throw new Error(JSON.stringify(confirmation.value.err));
 
       refreshAssetsService({ force: true });
       setShowSuccess(true);
@@ -226,6 +254,20 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
           </TouchableOpacity>
         </View>
 
+        {/* ★ 修正：説明文セクション（NFTでもトークンでも共通で表示） */}
+        {(description || descLoading) && (
+          <View style={localStyles.aboutContainer}>
+            <Text style={localStyles.aboutTitle}>About {asset.name}</Text>
+            {descLoading ? (
+              <ActivityIndicator size="small" color="#555" style={{ alignSelf: 'flex-start', marginTop: 10 }} />
+            ) : (
+              <Text style={localStyles.aboutText}>
+                {description}
+              </Text>
+            )}
+          </View>
+        )}
+
         {(showSkinButton || showBurnButton) && (
           <>
             <Text style={localStyles.sectionTitle}>{t('advanced_options') || 'Advanced Options'}</Text>
@@ -309,4 +351,8 @@ const localStyles = StyleSheet.create({
   secondaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   burnBtn: { flexDirection: 'row', backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)' },
   burnBtnText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
+
+  aboutContainer: { paddingHorizontal: 16, marginBottom: 32 },
+  aboutTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  aboutText: { color: '#aaa', fontSize: 14, lineHeight: 22, fontWeight: '400' },
 });
