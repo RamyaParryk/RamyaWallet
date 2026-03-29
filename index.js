@@ -9,7 +9,7 @@ import 'react-native-url-polyfill/auto';
 import { Buffer } from 'buffer';
 global.Buffer = Buffer;
 
-// ▼ 3. プロセス情報のポリフィル（★これが足りていませんでした！）
+// ▼ 3. プロセス情報のポリフィル
 import process from 'process';
 global.process = process;
 

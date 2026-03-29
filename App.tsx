@@ -17,7 +17,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
 import { SOL_MINT } from './src/constants/config';
-import { HeaderRow } from './src/components/HeaderRow'; // ★ 追加
+import { HeaderRow } from './src/components/HeaderRow';
 
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -59,13 +59,37 @@ import * as secureStorage from './src/storage/secureStorage';
 import { refreshAssetsService } from './src/services/refreshAssets';
 import { warmupNetwork } from './src/services/jupiterService';
 
-import { LayoutAnimation, UIManager, Platform } from 'react-native';
+// ★ NativeModules を追加インポート
+import { LayoutAnimation, UIManager, Platform, NativeModules } from 'react-native';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 import { AssetDetailScreen } from './src/screens/AssetDetailScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ==================================================
+// ★ スマホのシステム言語を自動取得する関数
+// ==================================================
+const getDeviceLanguage = () => {
+  try {
+    const locale = 
+      Platform.OS === 'ios'
+        ? NativeModules.SettingsManager.settings.AppleLocale || NativeModules.SettingsManager.settings.AppleLanguages[0]
+        : NativeModules.I18nManager.localeIdentifier;
+    
+    const langCode = locale ? locale.substring(0, 2).toLowerCase() : 'en';
+    const supportedLangs = ['ja', 'en', 'es', 'ru', 'de', 'zh', 'ko', 'fr', 'hi'];
+    
+    if (supportedLangs.includes(langCode)) {
+      return langCode;
+    }
+  } catch (error) {
+    console.log("Language detection error:", error);
+  }
+  return 'en'; // 取得失敗時・非対応言語の時は英語をデフォルトにする
+};
+// ==================================================
 
 const NavButton = ({ icon: Icon, label, active, onPress }: { icon: any; label: string; active: boolean; onPress: () => void; }) => (
   <TouchableOpacity onPress={onPress} style={styles.navBtn}>
@@ -215,7 +239,14 @@ export default function App() {
       try {
         const { settings, contacts, language, wallet } = await secureStorage.loadAll();
         if (contacts) setContacts(contacts);
-        if (language) setLang(language);
+        
+        // 保存された言語履歴があればそれを使い、なければスマホのシステム言語を採用する
+        if (language) {
+          setLang(language);
+        } else {
+          setLang(getDeviceLanguage());
+        }
+
         if (wallet) setWallet(wallet);
         if (settings) {
           if (typeof settings.pin !== 'undefined') setPin(settings.pin ?? null);
@@ -336,7 +367,6 @@ export default function App() {
         return <MainScreen t={t} activeTab={activeTab} setActiveTab={setTab} wallet={wallet} assets={assets} totalValue={totalValue} onRefresh={() => refreshAssets(true)} tokenList={tokenList} network={network} connection={connection} onRetryFetchTokens={fetchTokens} notify={showNotification} onNavigate={handleNavigate} onLogout={handleLogout} contacts={contacts} />;
       case 'receive': return <ReceiveScreen t={t} wallet={wallet} onBack={() => animatedSetScreen('main')} notify={showNotification} />;
       
-      // ★ 戻った時に真っ暗にならないよう、確実な判定を追加
       case 'send': 
         return <SendScreen 
           t={t} 
@@ -354,14 +384,12 @@ export default function App() {
           preSelectedAsset={navigationParams?.preSelectedAsset || navigationParams?.asset} 
         />;
       
-      // ★ 詳細画面から戻るボタン付きでスワップ画面を開く専用ルートを追加！
         case 'swap_standalone': {
         const solBal = assets.find((a: any) => a.mint === SOL_MINT)?.amount || 0;
         const tBals: any = {};
         assets.forEach((a: any) => { tBals[a.mint] = a.amount; });
         return (
           <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-            {/* ★ 修正: titleを空文字にして二重表示を防ぐ。戻るボタン（onBack）だけ機能させる */}
             <HeaderRow title="" onBack={() => animatedSetScreen('asset-detail')} />
             <View style={{ flex: 1, marginTop: -20 }}>
               <SwapScreen t={t} wallet={wallet} connection={connection} tokenList={tokenList} notify={showNotification} onRetryFetch={fetchTokens} solBalance={solBal} tokenBalances={tBals} preSelectedAsset={navigationParams?.asset} />
@@ -380,7 +408,6 @@ export default function App() {
       case 'pin_setup': return <PinSetupScreen t={t} onSuccess={handlePinSet} onCancel={() => { setPendingBioEnable(false); animatedSetScreen('settings_security'); }} />;
       case 'settings_network': return <NetworkSettingsScreen t={t} currentNetwork={network} setNetwork={async (net: any) => { setNetwork(net); await persistSettings({ network: net }); }} currentRpc={rpcEndpoint} setRpc={setRpcEndpoint} onBack={() => animatedSetScreen('main')} />;
       
-      // ★ 修正3: 戻った時に参照する asset が undefined（真っ暗）にならないよう、フォールバックを追加
       case 'asset-detail': 
         return <AssetDetailScreen
           t={t}
