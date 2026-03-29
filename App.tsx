@@ -73,12 +73,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ==================================================
 const getDeviceLanguage = () => {
   try {
-    const locale = 
-      Platform.OS === 'ios'
-        ? NativeModules.SettingsManager.settings.AppleLocale || NativeModules.SettingsManager.settings.AppleLanguages[0]
-        : NativeModules.I18nManager.localeIdentifier;
+    // JS標準の Intl を使う（iOS/Android両対応で確実）
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
     
+    // locale は "ja-JP" や "en-US" で返るので、先頭2文字を取得
     const langCode = locale ? locale.substring(0, 2).toLowerCase() : 'en';
+    
     const supportedLangs = ['ja', 'en', 'es', 'ru', 'de', 'zh', 'ko', 'fr', 'hi'];
     
     if (supportedLangs.includes(langCode)) {
@@ -87,7 +87,7 @@ const getDeviceLanguage = () => {
   } catch (error) {
     console.log("Language detection error:", error);
   }
-  return 'en'; // 取得失敗時・非対応言語の時は英語をデフォルトにする
+  return 'en'; // 失敗時のフォールバック
 };
 // ==================================================
 
@@ -241,10 +241,17 @@ export default function App() {
         if (contacts) setContacts(contacts);
         
         // 保存された言語履歴があればそれを使い、なければスマホのシステム言語を採用する
+        const deviceLang = getDeviceLanguage(); // 端末の言語を取得
+        console.log("[Debug] Device Language:", deviceLang); // デバッグ用にログ出力
+
         if (language) {
+          // 1. すでにユーザーが手動で設定（または過去に保存）している場合はそれを使う
           setLang(language);
-        } else {
-          setLang(getDeviceLanguage());
+       } else {
+         // 2. 初回起動などで保存データがない場合
+          setLang(deviceLang);
+          // ★次回以降のために、ここでデバイス言語を保存しておく
+         await secureStorage.saveLanguage(deviceLang);
         }
 
         if (wallet) setWallet(wallet);
