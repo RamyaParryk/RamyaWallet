@@ -1,0 +1,324 @@
+[
+  {
+    "address": "So11111111111111111111111111111111111111112",
+    "symbol": "SOL",
+    "name": "Solana",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/So11111111111111111111111111111111111111112/logo.png"
+  },
+  {
+    "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "symbol": "USDC",
+    "name": "USD Coin",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
+  },
+  {
+    "address": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+    "symbol": "USDT",
+    "name": "Tether USD",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png"
+  },
+  {
+    "address": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    "symbol": "JUP",
+    "name": "Jupiter",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png"
+  },
+  {
+    "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+    "symbol": "JitoSOL",
+    "name": "Jito Staked SOL",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn/logo.png"
+  },
+  {
+    "address": "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3",
+    "symbol": "SKR",
+    "name": "Seeker",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/39377.png"
+  },
+  {
+    "address": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "symbol": "BONK",
+    "name": "Bonk",
+    "decimals": 5,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png"
+  },
+  {
+    "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+    "symbol": "PUMP",
+    "name": "Pump.fun",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/36507.png"
+  },
+  {
+    "address": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+    "symbol": "WIF",
+    "name": "dogwifhat",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm/logo.png"
+  },
+  {
+    "address": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+    "symbol": "mSOL",
+    "name": "Marinade Staked SOL",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
+  },
+  {
+    "address": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+    "symbol": "bSOL",
+    "name": "BlazeStake Staked SOL",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1/logo.png"
+  },
+  {
+    "address": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
+    "symbol": "JupSOL",
+    "name": "Jupiter Staked SOL",
+    "decimals": 9,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/38192.png"
+  },
+  {
+    "address": "rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof",
+    "symbol": "RENDER",
+    "name": "Render",
+    "decimals": 8,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof/logo.png"
+  },
+  {
+    "address": "Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
+    "symbol": "GRASS",
+    "name": "Grass",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs/logo.png"
+  },
+  {
+    "address": "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr",
+    "symbol": "POPCAT",
+    "name": "Popcat",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr/logo.png"
+  },
+  {
+    "address": "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+    "symbol": "RAY",
+    "name": "Raydium",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png"
+  },
+  {
+    "address": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+    "symbol": "PYTH",
+    "name": "Pyth Network",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3/logo.png"
+  },
+  {
+    "address": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+    "symbol": "JTO",
+    "name": "Jito",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL/logo.png"
+  },
+  {
+    "address": "2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump",
+    "symbol": "PNUT",
+    "name": "Peanut the Squirrel",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/2qEHjDLDLbuBgRYvsxhc5D6uDWAivNFZGan56P1tpump/logo.png"
+  },
+  {
+    "address": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+    "symbol": "WBTC",
+    "name": "Wrapped Bitcoin",
+    "decimals": 8,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3717.png"
+  },
+  {
+    "address": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+    "symbol": "WETH",
+    "name": "Wrapped Ethereum",
+    "decimals": 8,
+    "logoURI": "https://statics.solscan.io/cdn/imgs/s60?ref=68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f736f6c616e612d6c6162732f746f6b656e2d6c6973742f6d61696e2f6173736574732f6d61696e6e65742f37766643585455587835574a56354a41446b313744554a346b736761753775744e4b6a3462393633766f78732f6c6f676f2e706e67"
+  },
+  {
+    "address": "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC",
+    "symbol": "AI16Z",
+    "name": "ai16z",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC/logo.png"
+  },
+  {
+    "address": "hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux",
+    "symbol": "HNT",
+    "name": "Helium",
+    "decimals": 8,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux/logo.png"
+  },
+  {
+    "address": "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+    "symbol": "DRIFT",
+    "name": "Drift Protocol",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7/logo.png"
+  },
+  {
+    "address": "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+    "symbol": "ORCA",
+    "name": "Orca",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE/logo.png"
+  },
+  {
+    "address": "GJAFwWjJ3vnTsrQVabjBVK2TYB1YtRCQXRDfDgUnpump",
+    "symbol": "ACT",
+    "name": "Act I: The AI Prophecy",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/GJAFwWjJ3vnTsrQVabjBVK2TYB1YtRCQXRDfDgUnpump/logo.png"
+  },
+  {
+    "address": "ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY",
+    "symbol": "MOODENG",
+    "name": "Moo Deng",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY/logo.png"
+  },
+  {
+    "address": "mb1eu7TzEc71KxDpsmsKoucSSuuoGLv1drys1oP2jh6",
+    "symbol": "MOBILE",
+    "name": "Helium Mobile",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/mb1eu7TzEc71KxDpsmsKoucSSuuoGLv1drys1oP2jh6/logo.png"
+  },
+  {
+    "address": "iotEVVZLEywoTn1QdwNPddxPWszn3zFhEot3MfL9fns",
+    "symbol": "IOT",
+    "name": "Helium IOT",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/24686.png"
+  },
+  {
+    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "symbol": "SLERF",
+    "name": "Slerf",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU/logo.png"
+  },
+  {
+    "address": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
+    "symbol": "WEN",
+    "name": "Wen",
+    "decimals": 5,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk/logo.png"
+  },
+  {
+    "address": "7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx",
+    "symbol": "GMT",
+    "name": "STEPN",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx/logo.png"
+  },
+  {
+    "address": "CBdCxKo9QavR9hfShgpEBG3zekorAeD7W1jfq2o3pump",
+    "symbol": "LUCE",
+    "name": "Official Mascot of the Holy Year",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/33694.png"
+  },
+  {
+    "address": "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
+    "symbol": "PENGU",
+    "name": "Pudgy Penguins",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv/logo.png"
+  },
+  {
+    "address": "8Ki8DpuWNxu9VsS3kQbarsCWMcFGWkzzA8pUPto9zBd5",
+    "symbol": "LOCKIN",
+    "name": "Lock In",
+    "decimals": 6,
+    "logoURI": "https://images.pump.fun/coin-image/8Ki8DpuWNxu9VsS3kQbarsCWMcFGWkzzA8pUPto9zBd5?variant=86x86&ipfs=Qmc2SJQW4K7UYYVLdoKSf4cGVZbuFGTF4dZiAdRtivNkpX&src=https%3A%2F%2Fipfs.io%2Fipfs%2FQmc2SJQW4K7UYYVLdoKSf4cGVZbuFGTF4dZiAdRtivNkpX"
+  },
+  {
+    "address": "63LfDmNb3MQ8mw9MtZ2To9bEA2M71kZUUGq5tiJxcqj9",
+    "symbol": "GIGA",
+    "name": "Gigachad",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/30063.png"
+  },
+  {
+    "address": "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp",
+    "symbol": "MICHI",
+    "name": "Michi",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/30943.png"
+  },
+  {
+    "address": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+    "symbol": "TRUMP",
+    "name": "OFFICIAL TRUMP",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/35336.png"
+  },
+  {
+    "address": "HhJpBhRRn4g56VsyLuT8DL5Bv31HkXqsrahTTUCZeZg4",
+    "symbol": "MYRO",
+    "name": "Myro",
+    "decimals": 9,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/28382.png"
+  },
+  {
+    "address": "poLisWXnNRwC6oBu1vHiuKQzFjGL4XDSu4g9qjz9qVk",
+    "symbol": "POLIS",
+    "name": "Star Atlas DAO",
+    "decimals": 8,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/poLisWXnNRwC6oBu1vHiuKQzFjGL4XDSu4g9qjz9qVk/logo.png"
+  },
+  {
+    "address": "MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey",
+    "symbol": "MNDE",
+    "name": "Marinade",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey/logo.png"
+  },
+  {
+    "address": "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt",
+    "symbol": "SRM",
+    "name": "Serum",
+    "decimals": 6,
+    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/6187.png"
+  },
+  {
+    "address": "AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP",
+    "symbol": "AURY",
+    "name": "Aurory",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/AURYydfxJib1ZkTir1Jn1J9ECYUtjb6rKQVmtYaixWPP/logo.png"
+  },
+  {
+    "address": "GENEtH5amGSi8kHAtQoezp1XEXwZJ8vcuePYnXdKrMYz",
+    "symbol": "GENE",
+    "name": "Genopets",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/GENEtH5amGSi8kHAtQoezp1XEXwZJ8vcuePYnXdKrMYz/logo.png"
+  },
+  {
+    "address": "nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7",
+    "symbol": "NOS",
+    "name": "Nosana",
+    "decimals": 6,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7/logo.png"
+  },
+  {
+    "address": "SHDWyBxihqiCj6YekG2GUr7wqKLeLAMK1gHZck9pL6y",
+    "symbol": "SHDW",
+    "name": "Shadow Token",
+    "decimals": 9,
+    "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/assets/SHDWyBxihqiCj6YekG2GUr7wqKLeLAMK1gHZck9pL6y/logo.png"
+  }
+]
