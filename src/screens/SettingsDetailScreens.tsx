@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet, Platform } from 'react-native';
-import { Lock, Check, Youtube, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server, Image as ImageIcon } from 'lucide-react-native';
+// Youtubeのアイコンインポートを削除
+import { Lock, Check, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server, Image as ImageIcon } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
-import { YOUTUBE_URL, GITHUB_URL } from '../constants/config';
+// YOUTUBE_URLのインポートを削除
+import { GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
@@ -326,7 +328,7 @@ export const AboutScreen = ({ t, onBack }: any) => {
       <HeaderRow title={t('about')} onBack={onBack} />
       <ScrollView contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }]}>
         <View style={{alignItems:'center', marginVertical: 40}}>
-          <View style={{width:100, height:100, borderRadius:24, backgroundColor:'#1a1a1a', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#333'}}>
+          <View style={{width:100, height:100, borderRadius:24, backgroundColor:'#ff98e0', justifyContent:'center', alignItems:'center', borderWidth:1, borderColor:'#333'}}>
              <Image source={require('../../assets/splash.png')} style={{width: 64, height: 64, borderRadius: 16}}/>
           </View>
           <Text style={{fontSize:24, fontWeight:'bold', color:'#fff', marginTop:16}}>{t('welcome_title')}</Text>
@@ -335,7 +337,7 @@ export const AboutScreen = ({ t, onBack }: any) => {
 
         <Text style={localStyles.sectionHeader}>Links & Info</Text>
         <View style={localStyles.card}>
-           <SettingItem icon={Youtube} title={t('official_youtube')} desc="@ramyaparryk" onPress={() => Linking.openURL(YOUTUBE_URL)} color="rgba(205, 32, 31, 0.1)" iconColor="#CD201F" />
+           {/* YouTubeのSettingItemを削除し、GitHubのみにしました */}
            <SettingItem icon={Github} title="Official GitHub" desc="Open Source" onPress={() => Linking.openURL(GITHUB_URL)} color="rgba(255, 255, 255, 0.1)" iconColor="#fff" />
            <SettingItem icon={Info} title={t('terms')} desc={t('terms_desc')} onPress={() => setModalVisible(true)} isLast={true} />
         </View>
