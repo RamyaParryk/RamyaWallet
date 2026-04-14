@@ -4,7 +4,6 @@ export interface WalletData {
   address: string;
   secretKey: Uint8Array;
   // mnemonic はセキュリティ的には保存しない方が安全。
-  // 既存挙動維持したいなら optional で残してOK。
   mnemonic?: string;
 }
 

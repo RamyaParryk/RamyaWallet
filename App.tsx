@@ -54,12 +54,14 @@ import { useAssetStore } from './src/state/assetStore';
 import { useContactsStore } from './src/state/contactsStore';
 import { useConnectionStore } from './src/state/connectionStore';
 
+import { useWalletConnectStore } from './src/state/walletConnectStore';
+import { WalletConnectModals } from './src/components/WalletConnectModals';
+
 import { loadTokenListFast, refreshTokenListInBackground } from './src/services/tokenListCache';
 import * as secureStorage from './src/storage/secureStorage';
 import { refreshAssetsService } from './src/services/refreshAssets';
 import { warmupNetwork } from './src/services/jupiterService';
 
-// ★ NativeModules を追加インポート
 import { LayoutAnimation, UIManager, Platform, NativeModules } from 'react-native';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -68,28 +70,19 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 import { AssetDetailScreen } from './src/screens/AssetDetailScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ==================================================
-// ★ スマホのシステム言語を自動取得する関数
-// ==================================================
 const getDeviceLanguage = () => {
   try {
-    // JS標準の Intl を使う（iOS/Android両対応で確実）
     const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-    
-    // locale は "ja-JP" や "en-US" で返るので、先頭2文字を取得
     const langCode = locale ? locale.substring(0, 2).toLowerCase() : 'en';
-    
-    const supportedLangs = ['ja', 'en', 'es', 'ru', 'de', 'zh', 'ko', 'fr', 'hi'];
-    
+    const supportedLangs = ['ja', 'en', 'es', 'pt', 'it', 'de', 'fr', 'ru', 'hi', 'vi', 'th', 'ar', 'fa', 'tr', 'sw', 'zh', 'ko'];
     if (supportedLangs.includes(langCode)) {
       return langCode;
     }
   } catch (error) {
     console.log("Language detection error:", error);
   }
-  return 'en'; // 失敗時のフォールバック
+  return 'en';
 };
-// ==================================================
 
 const NavButton = ({ icon: Icon, label, active, onPress }: { icon: any; label: string; active: boolean; onPress: () => void; }) => (
   <TouchableOpacity onPress={onPress} style={styles.navBtn}>
@@ -240,18 +233,12 @@ export default function App() {
         const { settings, contacts, language, wallet } = await secureStorage.loadAll();
         if (contacts) setContacts(contacts);
         
-        // 保存された言語履歴があればそれを使い、なければスマホのシステム言語を採用する
-        const deviceLang = getDeviceLanguage(); // 端末の言語を取得
-        console.log("[Debug] Device Language:", deviceLang); // デバッグ用にログ出力
-
+        const deviceLang = getDeviceLanguage();
         if (language) {
-          // 1. すでにユーザーが手動で設定（または過去に保存）している場合はそれを使う
           setLang(language);
-       } else {
-         // 2. 初回起動などで保存データがない場合
+        } else {
           setLang(deviceLang);
-          // ★次回以降のために、ここでデバイス言語を保存しておく
-         await secureStorage.saveLanguage(deviceLang);
+          await secureStorage.saveLanguage(deviceLang);
         }
 
         if (wallet) setWallet(wallet);
@@ -261,9 +248,13 @@ export default function App() {
           if (settings.network) setNetwork(settings.network as any);
         }
       } catch (e) { }
+      
       try { await warmupNetwork(); } catch {}
       await fetchTokens();
       try { initConnection?.(); } catch {}
+
+      // ★ 追加: アプリ起動時にWalletConnectを初期化し、通信をスタンバイ
+      useWalletConnectStore.getState().initWalletConnect();
 
       const hasWallet = !!useWalletStore.getState().wallet;
       const storedPin = useSettingsStore.getState().pin;
@@ -388,7 +379,9 @@ export default function App() {
             }
           }} 
           notify={showNotification} 
-          preSelectedAsset={navigationParams?.preSelectedAsset || navigationParams?.asset} 
+          preSelectedAsset={navigationParams?.preSelectedAsset || navigationParams?.asset}
+          preSelectedAddress={navigationParams?.preSelectedAddress}
+          preSelectedAmount={navigationParams?.preSelectedAmount}
         />;
       
         case 'swap_standalone': {
@@ -441,6 +434,10 @@ export default function App() {
           {notification && <View style={styles.notification}><Text style={styles.notificationText}>{notification}</Text></View>}
           {renderScreen()}
           <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />
+          
+          {/* WalletConnectの待受モーダル（アプリの最前面に常に配置） */}
+          <WalletConnectModals />
+
         </SafeAreaView>
       </ImageBackground>
     </SafeAreaProvider>

@@ -228,10 +228,24 @@ export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   }, []);
   const showBanner = adUnitId.length > 0;
 
-  const langs = [
-    { code: 'ja', label: '日本語' }, { code: 'en', label: 'English' }, { code: 'es', label: 'Español' },{ code: 'fr', label: 'Français' },
-    { code: 'ru', label: 'Русский' }, { code: 'de', label: 'Deutsch' }, { code: 'zh', label: '中文' }, { code: 'ko', label: '한국어' },
+const langs = [
+    { code: 'ja', label: '日本語' },
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Español' },
+    { code: 'pt', label: 'Português' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'ru', label: 'Русский' },
+    { code: 'ar', label: 'العربية' },
+    { code: 'fa', label: 'فارسی' },
+    { code: 'tr', label: 'Türkçe' },
     { code: 'hi', label: 'हिन्दी' },
+    { code: 'th', label: 'ภาษาไทย' },
+    { code: 'vi', label: 'Tiếng Việt' },
+    { code: 'sw', label: 'Kiswahili' },
+    { code: 'zh', label: '中文' },
+    { code: 'ko', label: '한국어' },
   ];
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>

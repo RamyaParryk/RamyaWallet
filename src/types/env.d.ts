@@ -8,4 +8,5 @@ declare module '@env' {
   export const COIN_GENKO_API_KEY: string;
   export const MORALIS_API_KEY: string;
   export const ZERION_API_KEY: string;
+  export const REOWN: string;
 }

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Image, Dimensions } from 'react-native';
-import { RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, Lock, Image as ImageIcon } from 'lucide-react-native';
+import { RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, Lock, Image as ImageIcon, QrCode } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { Camera } from 'react-native-vision-camera'; 
+import { useWalletConnectStore } from '../state/walletConnectStore';
+import { useAssetStore } from '../state/assetStore';
 import { styles } from '../styles/globalStyles';
 import { shortenAddress } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
 import { SelectionModal } from '../components/ActionModals';
+import { QRScannerModal } from '../components/QRScannerModal';
 
 const { width } = Dimensions.get('window');
 
@@ -20,7 +24,6 @@ const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) =>
 
 type AssetItemProps = { asset: any; onNavigate: any; };
 
-// ★ 変更: AssetItemをただのViewからTouchableOpacityに変更し、タップ可能に！
 const AssetItem: React.FC<AssetItemProps> = ({ asset, onNavigate }) => {
   const { mint, symbol, name, amount, price, logoURI, status } = asset;
   if (status === 'suspicious') return null;
@@ -107,9 +110,64 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
   const [buyModalVisible, setBuyModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>(lastActiveTab);
 
+  const [isScanning, setIsScanning] = useState(false);
+
   const switchTab = (tab: 'tokens' | 'nfts') => {
     setActiveTab(tab);
     lastActiveTab = tab;
+  };
+
+  // 万能スキャンロジック（Solana Pay規格対応）
+  const handleUniversalScan = (scannedValue: string) => {
+    setIsScanning(false);
+    
+    if (scannedValue.startsWith('wc:')) {
+      notify(t('processing') || 'Connecting to dApp...');
+      useWalletConnectStore.getState().pair(scannedValue).catch(e => console.log('WC Pair error', e));
+      return;
+    } 
+    
+    // Solana Pay 規格の解析
+    if (scannedValue.startsWith('solana:')) {
+      const urlStr = scannedValue.replace('solana:', '');
+      const [addressPart, queryPart] = urlStr.split('?');
+      
+      let amount = '';
+      let splToken = '';
+
+      if (queryPart) {
+        const params = new URLSearchParams(queryPart);
+        amount = params.get('amount') || '';
+        splToken = params.get('spl-token') || '';
+      }
+
+      // ストアから指定されたアセット（トークン）を探し出す
+      let passedAsset = null;
+      if (splToken) {
+        const currentAssets = useAssetStore.getState().assets;
+        passedAsset = currentAssets.find((a: any) => a.mint === splToken);
+      }
+
+      // 解析したデータをすべて送金画面に丸投げする！
+      onNavigate('send', { 
+        preSelectedAddress: addressPart, 
+        preSelectedAmount: amount, 
+        preSelectedAsset: passedAsset 
+      });
+      return;
+    }
+
+    // ただのプレーンなアドレスの場合
+    onNavigate('send', { preSelectedAddress: scannedValue });
+  };
+
+  const handleOpenScanner = async () => {
+    const permission = await Camera.requestCameraPermission();
+    if (permission === 'granted') {
+      setIsScanning(true);
+    } else {
+      notify(t('camera_permission_denied') || 'Camera permission denied');
+    }
   };
 
   const stakedAssets = assets?.filter((a: any) => a.mint === 'native-stake') || [];
@@ -117,113 +175,121 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
   const nftAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals === 0) || [];
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          style={styles.addressPill}
-          onPress={() => { Clipboard.setString(wallet?.address); notify(t('address_copied')); }}
-        >
-          <View style={styles.greenDot} />
-          <Text style={styles.addressText}>{shortenAddress(wallet?.address)}</Text>
-          <Copy size={12} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconBtn} onPress={() => { notify(t('processing')); onRefresh?.(); }}>
-          <RefreshCw size={20} color="#888" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.balanceSection}>
-        <Text style={styles.label}>{t('total_assets')}</Text>
-        <Text style={styles.bigBalance}>
-          ${Number(totalValue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-        </Text>
-
-        <View style={styles.actionRow}>
-          <ActionButton icon={ArrowDownLeft} label={t('receive')} onPress={() => onNavigate('receive')} />
-          <ActionButton icon={Send} label={t('send')} onPress={() => onNavigate('send')} />
-          <ActionButton icon={CreditCard} label={t('buy')} onPress={() => setBuyModalVisible(true)} />
-
-          <View style={{ alignItems: 'center', gap: 5 }}>
-            <TouchableOpacity style={[styles.actionCircle, { backgroundColor: '#22c55e' }]} onPress={() => onNavigate('stake')}>
-              <TrendingUp size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.label}>{t('stake')}</Text>
-          </View>
-        </View>
-      </View>
-
-      {stakedAssets.length > 0 && (
-        <View style={localStyles.stakedContainer}>
-          <Text style={localStyles.stakedTitle}>Staked / DeFi Positions</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginHorizontal: -20 }}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+    <>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.addressPill}
+            onPress={() => { Clipboard.setString(wallet?.address); notify(t('address_copied')); }}
           >
-            {stakedAssets.map((asset: any) => (
-              <StakedAssetCard key={asset.mint} asset={asset} />
-            ))}
-          </ScrollView>
-        </View>
-      )}
+            <View style={styles.greenDot} />
+            <Text style={styles.addressText}>{shortenAddress(wallet?.address)}</Text>
+            <Copy size={12} color="#666" />
+          </TouchableOpacity>
 
-      <View style={localStyles.tabContainer}>
-        <TouchableOpacity 
-          style={[localStyles.tabButton, activeTab === 'tokens' && localStyles.activeTab]} 
-          onPress={() => switchTab('tokens')}
-        >
-          <Text style={[localStyles.tabText, activeTab === 'tokens' && localStyles.activeTabText]}>Tokens</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[localStyles.tabButton, activeTab === 'nfts' && localStyles.activeTab]} 
-          onPress={() => switchTab('nfts')}
-        >
-          <Text style={[localStyles.tabText, activeTab === 'nfts' && localStyles.activeTabText]}>NFTs ({nftAssets.length})</Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'tokens' ? (
-        <View style={styles.assetsCard}>
-          <View style={styles.assetsHeader}>
-            <Text style={styles.sectionTitle}>{t('assets')}</Text>
-            <TouchableOpacity onPress={() => onNav('swap')}>
-              <Text style={styles.linkText}>{t('trade')}</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={styles.iconBtn} onPress={handleOpenScanner}>
+              <QrCode size={20} color="#888" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => { notify(t('processing')); onRefresh?.(); }}>
+              <RefreshCw size={20} color="#888" />
             </TouchableOpacity>
           </View>
-
-          {(!liquidAssets || liquidAssets.length === 0) ? (
-            <Text style={{ color: '#666', textAlign: 'center', marginTop: 20 }}>{t('no_assets')}</Text>
-          ) : (
-            liquidAssets.map((asset: any) => (
-              <AssetItem key={asset.mint} asset={asset} onNavigate={onNavigate} />
-            ))
-          )}
         </View>
-      ) : (
-        <View style={localStyles.nftGrid}>
-          {(!nftAssets || nftAssets.length === 0) ? (
-            <Text style={{ color: '#666', textAlign: 'center', width: '100%', marginTop: 40 }}>No NFTs found</Text>
-          ) : (
-            nftAssets.map((asset: any) => (
-              <NftCard key={asset.mint} asset={asset} onNavigate={onNavigate} />
-            ))
-          )}
-        </View>
-      )}
 
-      <SelectionModal
-        visible={buyModalVisible}
-        title={t('purchase_provider')}
-        onCancel={() => setBuyModalVisible(false)}
-        options={[
-          { label: 'MoonPay (Global)', onPress: () => Linking.openURL('https://www.moonpay.com/buy') },
-          { label: 'Transak (Global)', onPress: () => Linking.openURL('https://global.transak.com/') },
-          { label: 'Coinbase Pay', onPress: () => Linking.openURL('https://pay.coinbase.com/') },
-        ]}
-      />
-    </ScrollView>
+        <View style={styles.balanceSection}>
+          <Text style={styles.label}>{t('total_assets')}</Text>
+          <Text style={styles.bigBalance}>
+            ${Number(totalValue || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </Text>
+
+          <View style={styles.actionRow}>
+            <ActionButton icon={ArrowDownLeft} label={t('receive')} onPress={() => onNavigate('receive')} />
+            <ActionButton icon={Send} label={t('send')} onPress={() => onNavigate('send')} />
+            <ActionButton icon={CreditCard} label={t('buy')} onPress={() => setBuyModalVisible(true)} />
+
+            <View style={{ alignItems: 'center', gap: 5 }}>
+              <TouchableOpacity style={[styles.actionCircle, { backgroundColor: '#22c55e' }]} onPress={() => onNavigate('stake')}>
+                <TrendingUp size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.label}>{t('stake')}</Text>
+            </View>
+          </View>
+        </View>
+
+        {stakedAssets.length > 0 && (
+          <View style={localStyles.stakedContainer}>
+            <Text style={localStyles.stakedTitle}>Staked / DeFi Positions</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginHorizontal: -20 }}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+            >
+              {stakedAssets.map((asset: any) => (
+                <StakedAssetCard key={asset.mint} asset={asset} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        <View style={localStyles.tabContainer}>
+          <TouchableOpacity 
+            style={[localStyles.tabButton, activeTab === 'tokens' && localStyles.activeTab]} 
+            onPress={() => switchTab('tokens')}
+          >
+            <Text style={[localStyles.tabText, activeTab === 'tokens' && localStyles.activeTabText]}>Tokens</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[localStyles.tabButton, activeTab === 'nfts' && localStyles.activeTab]} 
+            onPress={() => switchTab('nfts')}
+          >
+            <Text style={[localStyles.tabText, activeTab === 'nfts' && localStyles.activeTabText]}>NFTs ({nftAssets.length})</Text>
+          </TouchableOpacity>
+        </View>
+
+        {activeTab === 'tokens' ? (
+          <View style={styles.assetsCard}>
+            <View style={styles.assetsHeader}>
+              <Text style={styles.sectionTitle}>{t('assets')}</Text>
+              <TouchableOpacity onPress={() => onNav('swap')}>
+                <Text style={styles.linkText}>{t('trade')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {(!liquidAssets || liquidAssets.length === 0) ? (
+              <Text style={{ color: '#666', textAlign: 'center', marginTop: 20 }}>{t('no_assets')}</Text>
+            ) : (
+              liquidAssets.map((asset: any) => (
+                <AssetItem key={asset.mint} asset={asset} onNavigate={onNavigate} />
+              ))
+            )}
+          </View>
+        ) : (
+          <View style={localStyles.nftGrid}>
+            {(!nftAssets || nftAssets.length === 0) ? (
+              <Text style={{ color: '#666', textAlign: 'center', width: '100%', marginTop: 40 }}>No NFTs found</Text>
+            ) : (
+              nftAssets.map((asset: any) => (
+                <NftCard key={asset.mint} asset={asset} onNavigate={onNavigate} />
+              ))
+            )}
+          </View>
+        )}
+
+        <SelectionModal
+          visible={buyModalVisible}
+          title={t('purchase_provider')}
+          onCancel={() => setBuyModalVisible(false)}
+          options={[
+            { label: 'MoonPay (Global)', onPress: () => Linking.openURL('https://www.moonpay.com/buy') },
+            { label: 'Transak (Global)', onPress: () => Linking.openURL('https://global.transak.com/') },
+            { label: 'Coinbase Pay', onPress: () => Linking.openURL('https://pay.coinbase.com/') },
+          ]}
+        />
+      </ScrollView>
+      <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleUniversalScan} />
+    </>
   );
 };
 
