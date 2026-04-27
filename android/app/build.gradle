@@ -19,8 +19,8 @@ android {
         applicationId "com.ratolab.ramyawallet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "1.4.2"
+        versionCode 13
+        versionName "1.5"
     }
     signingConfigs {
         debug {

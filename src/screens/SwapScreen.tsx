@@ -9,30 +9,28 @@ import {
   Modal,
   StyleSheet,
   ScrollView,
-  Platform, // ★ Platformを追加
+  Platform, 
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArrowDown, X, Search, Shield, BadgeCheck } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 
-import { createJupiterApiClient } from '@jup-ag/api';
 import { ReferralProvider } from '@jup-ag/referral-sdk';
 
-import { MY_PLATFORM_FEE_BPS, MY_FEE_ACCOUNT, JUPITER_BASE_PATH } from '../constants/config';
+import { MY_PLATFORM_FEE_BPS, MY_FEE_ACCOUNT } from '../constants/config';
 import { parseSolanaError } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 
-// どこからでも資産を更新できるサービスをインポート
 import { refreshAssetsService } from '../services/refreshAssets';
+import { jupiterQuoteApi } from '../services/jupiterService'; // ★共通クライアントをインポート！
 
-// ★ 追加: 広告用のインポート
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
 
 const BAD_MINTS_KEY = 'ramya_bad_icon_mints_v1';
-const BANNER_ESTIMATED_HEIGHT = 60; // ★ 広告の高さ
+const BANNER_ESTIMATED_HEIGHT = 60; 
 
 const shortenAddress = (address: string, chars = 4) => {
   if (!address) return '';
@@ -50,20 +48,6 @@ function isValidLogo(uri?: string) {
   return true;
 }
 
-const jupiterQuoteApi = createJupiterApiClient({
-  basePath: JUPITER_BASE_PATH,
-  fetchApi: (url, init) => {
-    return fetch(url, {
-      ...init,
-      headers: {
-        ...init?.headers,
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
-  },
-});
-
 export const SwapScreen = ({
   t,
   wallet,
@@ -76,7 +60,6 @@ export const SwapScreen = ({
 }: any) => {
   const [badMints, setBadMints] = useState<Set<string>>(new Set());
 
-  // ★ 広告の表示判定
   const adUnitId = useMemo(() => {
     if (Platform.OS !== 'android') return '';
     return (ADMOB_ANDROID_ENV || '').trim();
@@ -100,7 +83,6 @@ export const SwapScreen = ({
     setBadMints((prev) => {
       if (prev.has(mint)) return prev;
       const next = new Set(prev);
-      next.add(mint);
       AsyncStorage.setItem(BAD_MINTS_KEY, JSON.stringify(Array.from(next))).catch(() => {});
       return next;
     });
@@ -280,7 +262,6 @@ export const SwapScreen = ({
       <ScrollView 
         contentContainerStyle={[
           localStyles.scrollContent, 
-          // ★ 広告がある場合は一番下までスクロールできるように余白を広げる
           { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 }
         ]}
       >
@@ -522,7 +503,6 @@ export const SwapScreen = ({
         onClose={() => setAlert({ ...alert, visible: false })}
       />
 
-      {/* ★ 広告バナーを最下部に固定表示 */}
       {showBanner ? (
         <View style={localStyles.bannerContainer}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
@@ -569,15 +549,14 @@ const localStyles = StyleSheet.create({
   tokenBalanceText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   verifiedBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.15)', marginHorizontal: 16, marginBottom: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
   verifiedText: { color: '#60a5fa', fontSize: 12, fontWeight: '600', flex: 1 },
-  // ★ 広告用のスタイルを追加
   bannerContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0, // 下のタブバーの上にピッタリ乗ります
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingTop: 8,
-    backgroundColor: 'transparent', // 画面の背景と同じ色にする
+    backgroundColor: 'transparent', 
   },
 });

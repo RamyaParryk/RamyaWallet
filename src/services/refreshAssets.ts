@@ -1,7 +1,8 @@
 import type { Connection } from '@solana/web3.js';
 import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 
-import { TOKEN_PROGRAM_ID, SOL_MINT } from '../constants/config';
+import { fetchStakedSkrAmount } from './skrStakingService';
+import { TOKEN_PROGRAM_ID, SOL_MINT, SKR_MINT } from '../constants/config';
 import { shortenAddress } from '../utils/solanaUtils';
 import { fetchTokenList, fetchPrices, fetchOnChainMetadata } from './jupiterService';
 
@@ -85,6 +86,27 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
     });
   }
 
+  // ---- Staked SKR (Solana Seeker) の実残高取得
+  try {
+    const stakedSkrAmount = await fetchStakedSkrAmount(connection, walletAddress);
+    
+    // 0以上なら資産に追加（合計残高にも反映されるようになります）
+    if (stakedSkrAmount > 0) {
+      addAsset({
+        mint: 'staked-skr',
+        symbol: 'SKR',
+        name: 'Staked Seeker',
+        amount: stakedSkrAmount,
+        decimals: 6, // ★ 9から6に変更！
+        logoURI: tokenMap.get(SKR_MINT)?.logoURI || '',
+        status: 'verified'
+      });
+      if (!mintsToFetchPrice.includes(SKR_MINT)) {
+        mintsToFetchPrice.push(SKR_MINT);
+      }
+    }
+  } catch (e) { console.log("[REFRESH] SKR Stake error:", e); }
+
   // ---- 通常のSPLとToken-2022
   const [tokenAccounts, token2022Accounts] = await Promise.all([
     connection.getParsedTokenAccountsByOwner(pubKey, { programId: TOKEN_PROGRAM_ID }),
@@ -123,19 +145,19 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
     mintsToFetchPrice.push(mint);
   }
 
-// ---- NFT (Helius DAS API)
+  // ---- NFT (Helius DAS API)
   try {
     const response = await fetch(connection.rpcEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0', id: 'nft-fetch', method: 'getAssetsByOwner',
-        params: { ownerAddress: walletAddress, page: 1, limit: 1000, displayOptions: { showFungible: false } }, // ここは trueであるべきかも
+        params: { ownerAddress: walletAddress, page: 1, limit: 1000, displayOptions: { showFungible: false } },
       }),
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: any = await response.json();
       if (data.result && data.result.items) {
         for (const item of data.result.items) {
           const mint = item.id;
@@ -147,29 +169,18 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
             
             let description = item.content?.metadata?.description || '';
             const isToken2022 = item.token_info?.token_program === 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
-            const isSpam = item.mutable === true && (name.toLowerCase().includes('airdrop') || name.toLowerCase().includes('claim'));
+            
+            const isSpam = 
+              (item.mutable === true && (name.toLowerCase().includes('airdrop') || name.toLowerCase().includes('claim'))) ||
+              name === 'RamyaWallet'; 
 
-            // ★ 調査用ログ: NFTのログ詳出力、Seekerは含まれないかも
-            console.log('[NFT]', {
-            name,
-            symbol,
-            jsonUri: item.content?.json_uri,
-            metaUri: item.content?.metadata?.uri,
-            });
-
-            // ★ 2段構え！説明文が空ならJSONを直接読みに行く
             if (!description) {
               const jsonUri = item.content?.json_uri || item.content?.metadata?.uri;
               if (jsonUri && jsonUri.startsWith('http')) {
                 try {
-                  if (name.includes('Seeker')) console.log(`[DEBUG] Fetching deep JSON from: ${jsonUri}`);
-                  
                   const metaRes = await fetch(jsonUri);
-                  const metaJson = await metaRes.json();
+                  const metaJson: any = await metaRes.json();
                   
-                  if (name.includes('Seeker')) console.log(`[DEBUG] Deep JSON result:`, metaJson);
-
-                  // いろんな場所にある可能性を考慮して探す
                   if (metaJson.description) {
                     description = metaJson.description;
                   } else if (metaJson.metadata?.description) {
@@ -205,7 +216,13 @@ async function buildAssets(params: { connection: Connection; walletAddress: stri
         if (a.mint === 'native-stake') {
           a.price = solPrice;
           a.value = a.amount * solPrice;
-        } else if (a.decimals > 0) { 
+        } 
+        else if (a.mint === 'staked-skr') {
+          const p = priceMap[SKR_MINT]?.price ? Number(priceMap[SKR_MINT].price) : 0;
+          a.price = p;
+          a.value = a.amount * p;
+        } 
+        else if (a.decimals > 0) { 
           const p = priceMap[a.mint]?.price ? Number(priceMap[a.mint].price) : 0;
           a.price = p;
           a.value = a.amount * p;

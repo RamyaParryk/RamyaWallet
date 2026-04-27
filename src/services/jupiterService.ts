@@ -38,9 +38,16 @@ const POST_HEADERS: Record<string, string> = {
   ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
 };
 
-const jupiterQuoteApi = createJupiterApiClient({
+export const jupiterQuoteApi = createJupiterApiClient({
   basePath: JUPITER_BASE_PATH,
-  fetchApi: (url, init) => fetch(url, { ...init, headers: { ...(init?.headers as any), ...GET_HEADERS } }),
+  fetchApi: (url, init) => fetch(url, { 
+    ...init, 
+    headers: { 
+      ...(init?.headers as any), 
+      ...GET_HEADERS,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    } 
+  }),
 });
 
 const JUPITER_TOKENS_V2_VERIFIED = 'https://api.jup.ag/tokens/v2/tag?query=verified';
@@ -88,7 +95,7 @@ async function loadJupiterVerifiedTokens(): Promise<TokenInfo[] | null> {
   if (!JUPITER_API_KEY) return null;
   const res = await fetch(JUPITER_TOKENS_V2_VERIFIED, { headers: GET_HEADERS });
   if (!res.ok) return null;
-  const json = await res.json().catch(() => null);
+  const json: any = await res.json().catch(() => null); // ★修正
   if (!Array.isArray(json)) return null;
   const unique = dedupe(json.map(normalizeToken).filter(Boolean) as TokenInfo[]);
   if (unique.length < 50) return null;
@@ -116,14 +123,13 @@ export const fetchOnChainMetadata = async (mint: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 'get-asset', method: 'getAsset', params: { id: mint } }),
     });
-    const json = await response.json().catch(() => null);
+    const json: any = await response.json().catch(() => null); // ★修正
     if (!json?.result) return null;
     const logo = normalizeLogoUri(json.result.content?.links?.image || json.result.content?.metadata?.image || json.result.content?.files?.[0]?.uri || '');
     return { name: json.result.content?.metadata?.name || 'Unknown', symbol: json.result.content?.metadata?.symbol || '???', logoURI: logo, status: 'verified' };
   } catch { return null; }
 };
 
-// ★ 修正: SOLとその他のトークンでCoinGeckoの叩き方を分ける
 export const fetchPrices = async (ids: string) => {
   if (!ids) return null;
   try {
@@ -132,28 +138,26 @@ export const fetchPrices = async (ids: string) => {
     const splAddresses = addresses.filter(a => a !== SOL_MINT && a !== 'native-stake').join(',');
     const priceMap: any = {};
 
-    // 1. SOLの価格を取得 (CoinGeckoの仕様で、SOLだけは ids=solana で取得する必要がある)
     if (hasSol) {
       const solRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd`, {
         headers: { 'x-cg-demo-api-key': COIN_GENKO_API_KEY || '' }
       });
       if (solRes.ok) {
-        const solData = await solRes.json();
+        const solData: any = await solRes.json(); // ★修正
         if (solData.solana?.usd) {
           priceMap[SOL_MINT] = { price: String(solData.solana.usd) };
-          priceMap['native-stake'] = { price: String(solData.solana.usd) }; // ステーキング分も同じ価格
+          priceMap['native-stake'] = { price: String(solData.solana.usd) };
         }
       }
     }
 
-    // 2. その他のSPLトークン(SKR等)の価格を取得
     if (splAddresses) {
       const url = `https://api.coingecko.com/api/v3/simple/token_price/solana?contract_addresses=${splAddresses}&vs_currencies=usd`;
       const res = await fetch(url, {
         headers: { 'x-cg-demo-api-key': COIN_GENKO_API_KEY || '' }
       });
       if (res.ok) {
-        const data = await res.json();
+        const data: any = await res.json();
         Object.keys(data).forEach((address) => {
           if (data[address]?.usd !== undefined) priceMap[address] = { price: String(data[address].usd) };
         });
@@ -164,11 +168,10 @@ export const fetchPrices = async (ids: string) => {
     console.warn(`${LOG.price} ❌ CoinGecko error:`, e);
   }
 
-  // フォールバック
   try {
     const res = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`, { headers: GET_HEADERS });
     if (res.ok) {
-      const json = await res.json();
+      const json: any = await res.json(); // ★修正
       if (json?.data) return json.data;
     }
   } catch (e) { }
@@ -184,7 +187,7 @@ export const getSwapTransaction = async (quoteResponse: any, userPublicKey: stri
     const body = { quoteResponse, userPublicKey, wrapAndUnwrapSol: true, ...(MY_FEE_ACCOUNT ? { feeAccount: MY_FEE_ACCOUNT } : {}), ...options };
     const response = await fetch(`${JUPITER_BASE_PATH}/swap`, { method: 'POST', headers: POST_HEADERS, body: JSON.stringify(body) });
     if (!response.ok) return null;
-    const json = await response.json();
+    const json: any = await response.json(); // ★修正
     return json?.swapTransaction ?? null;
   } catch (error) { return null; }
 };

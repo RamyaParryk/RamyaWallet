@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Image, Dimensions } from 'react-native';
 import { RefreshCw, Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, BadgeCheck, Lock, Image as ImageIcon, QrCode } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -64,23 +64,30 @@ const AssetItem: React.FC<AssetItemProps> = ({ asset, onNavigate }) => {
   );
 };
 
-const StakedAssetCard = ({ asset }: { asset: any }) => (
-  <View style={localStyles.stakedCard}>
-    <View style={localStyles.stakedHeader}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <TokenIcon uri={asset.logoURI} symbol={asset.symbol} size={24} />
-        <Text style={localStyles.stakedName} numberOfLines={1}>{asset.name}</Text>
+// ★ SKRステーキング（本物）用の青色ハイライトデザインを復活
+const StakedAssetCard = ({ asset }: { asset: any }) => {
+  const isSkr = asset.mint === 'staked-skr';
+
+  return (
+    <View style={[localStyles.stakedCard, isSkr && localStyles.skrHighlight]}>
+      <View style={localStyles.stakedHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+          <TokenIcon uri={asset.logoURI} symbol={asset.symbol} size={24} />
+          <Text style={localStyles.stakedName} numberOfLines={1}>
+            {asset.symbol} {isSkr && '(Guardian)'}
+          </Text>
+        </View>
+        {isSkr ? <BadgeCheck size={16} color="#3b82f6" /> : <Lock size={14} color="#888" />}
       </View>
-      <Lock size={14} color="#888" />
+      <Text style={localStyles.stakedAmount}>
+        {asset.amount.toLocaleString()} {asset.symbol}
+      </Text>
+      <Text style={localStyles.stakedValue}>
+        ${((asset.amount || 0) * (asset.price || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      </Text>
     </View>
-    <Text style={localStyles.stakedAmount}>
-      {asset.amount.toLocaleString()} {asset.symbol}
-    </Text>
-    <Text style={localStyles.stakedValue}>
-      ${((asset.amount || 0) * (asset.price || 0)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-    </Text>
-  </View>
-);
+  );
+};
 
 const NftCard = ({ asset, onNavigate }: { asset: any, onNavigate: any }) => (
   <TouchableOpacity 
@@ -117,7 +124,6 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
     lastActiveTab = tab;
   };
 
-  // 万能スキャンロジック（Solana Pay規格対応）
   const handleUniversalScan = (scannedValue: string) => {
     setIsScanning(false);
     
@@ -127,7 +133,6 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
       return;
     } 
     
-    // Solana Pay 規格の解析
     if (scannedValue.startsWith('solana:')) {
       const urlStr = scannedValue.replace('solana:', '');
       const [addressPart, queryPart] = urlStr.split('?');
@@ -141,14 +146,12 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
         splToken = params.get('spl-token') || '';
       }
 
-      // ストアから指定されたアセット（トークン）を探し出す
       let passedAsset = null;
       if (splToken) {
         const currentAssets = useAssetStore.getState().assets;
         passedAsset = currentAssets.find((a: any) => a.mint === splToken);
       }
 
-      // 解析したデータをすべて送金画面に丸投げする！
       onNavigate('send', { 
         preSelectedAddress: addressPart, 
         preSelectedAmount: amount, 
@@ -157,7 +160,6 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
       return;
     }
 
-    // ただのプレーンなアドレスの場合
     onNavigate('send', { preSelectedAddress: scannedValue });
   };
 
@@ -170,9 +172,14 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
     }
   };
 
-  const stakedAssets = assets?.filter((a: any) => a.mint === 'native-stake') || [];
-  const liquidAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals > 0) || [];
-  const nftAssets = assets?.filter((a: any) => a.mint !== 'native-stake' && a.decimals === 0) || [];
+  // ★ 修正: LSTは通常のトークンとし、Native StakeとSKRステーキングのみを特別枠に
+  const isStaked = useCallback((mint: string) => 
+    mint === 'native-stake' || mint === 'staked-skr'
+  , []);
+
+  const stakedAssets = assets?.filter((a: any) => isStaked(a.mint)) || [];
+  const liquidAssets = assets?.filter((a: any) => !isStaked(a.mint) && a.decimals > 0) || [];
+  const nftAssets = assets?.filter((a: any) => !isStaked(a.mint) && a.decimals === 0) || [];
 
   return (
     <>
@@ -297,6 +304,8 @@ const localStyles = StyleSheet.create({
   stakedContainer: { marginTop: 10, marginBottom: 10 },
   stakedTitle: { fontSize: 16, fontWeight: 'bold', color: '#aaa', marginBottom: 12 },
   stakedCard: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#333', borderRadius: 16, padding: 16, width: 170 },
+  // ★ SKR用の青枠ハイライトを再定義
+  skrHighlight: { borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' },
   stakedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   stakedName: { color: '#fff', fontWeight: 'bold', fontSize: 14, flexShrink: 1 },
   stakedAmount: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
