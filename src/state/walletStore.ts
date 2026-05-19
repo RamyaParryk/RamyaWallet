@@ -2,9 +2,12 @@ import { create } from 'zustand';
 
 export interface WalletData {
   address: string;
-  secretKey: Uint8Array;
-  // mnemonic はセキュリティ的には保存しない方が安全。
+  walletType: 'local' | 'seed-vault';
+  secretKey?: Uint8Array;
   mnemonic?: string;
+  authToken?: string | number;
+  // seedvault用
+  derivationPath?: any;
 }
 
 interface WalletState {

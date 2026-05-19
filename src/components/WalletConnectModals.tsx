@@ -19,7 +19,6 @@ export const WalletConnectModals = () => {
   
   const wallet = useWalletStore(s => s.wallet);
   
-  // ★ 言語設定を取得して翻訳関数(t)を準備
   const lang = useSettingsStore(s => s.lang);
   const t = useTranslation(lang);
 
@@ -85,7 +84,8 @@ export const WalletConnectModals = () => {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.approveBtn, { backgroundColor: '#22c55e' }]} 
-                onPress={() => approveRequest(request, wallet.secretKey)}
+                // wallet.secretKey ではなく wallet 全体を渡す
+                onPress={() => approveRequest(request, wallet)}
               >
                 <Text style={styles.approveBtnText}>{t('sign') || 'Sign'}</Text>
               </TouchableOpacity>

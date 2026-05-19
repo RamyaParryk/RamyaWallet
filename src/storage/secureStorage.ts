@@ -36,10 +36,22 @@ export async function loadAll() {
   let wallet: WalletData | null = null;
   if (secureJson) {
     const storedWallet = JSON.parse(secureJson);
-    wallet = {
-      ...storedWallet,
-      secretKey: new Uint8Array(Object.values(storedWallet.secretKey)),
-    };
+    
+    // 一度確実に null ではない変数に格納する
+    const parsedWallet: WalletData = { ...storedWallet };
+    
+    // 既存ユーザーの互換性のため、walletTypeが無い場合は 'local' をセット
+    if (!parsedWallet.walletType) {
+      parsedWallet.walletType = 'local';
+    }
+
+    // localウォレット（secretKeyが存在する場合）のみ Uint8Array に復元する
+    if (storedWallet.secretKey) {
+      parsedWallet.secretKey = new Uint8Array(Object.values(storedWallet.secretKey));
+    }
+    
+    // 最後に wallet に代入
+    wallet = parsedWallet;
   }
 
   return { settings, contacts, language, wallet };

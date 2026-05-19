@@ -1,25 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, Modal, StyleSheet, Platform } from 'react-native';
-// Youtubeのアイコンインポートを削除
-import { Lock, Check, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server, Image as ImageIcon } from 'lucide-react-native';
+import { Lock, Check, Github, Info, RefreshCw, TrendingUp, Percent, Zap, ShieldCheck, Wallet, ChevronRight, X, AlertCircle, Globe, Server, Image as ImageIcon, Flame } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 
 import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
-// YOUTUBE_URLのインポートを削除
 import { GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 
-// 広告と安全領域用のインポート
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
 
 const BANNER_ESTIMATED_HEIGHT = 60;
 
-// モダンUI共通のカード型 SettingItem
 const SettingItem = ({ icon: Icon, title, desc, onPress, color = "rgba(168, 85, 247, 0.1)", iconColor = "#a855f7", isLast = false, rightElement }: any) => (
   <TouchableOpacity 
     style={[localStyles.settingItem, !isLast && localStyles.borderBottom]} 
@@ -38,7 +34,6 @@ const SettingItem = ({ icon: Icon, title, desc, onPress, color = "rgba(168, 85, 
   </TouchableOpacity>
 );
 
-// --- セキュリティ設定画面 ---
 export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack }: any) => {
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -49,6 +44,8 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   const [confirm, setConfirm] = useState<any>({ visible: false });
 
   const wordCount = wallet?.mnemonic ? wallet.mnemonic.trim().split(/\s+/).length : 0;
+  // Seed Vaultかどうかを判定
+  const isSeedVault = wallet?.walletType === 'seed-vault';
 
   const adUnitId = useMemo(() => {
     if (Platform.OS !== 'android') return '';
@@ -110,35 +107,40 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
           />
         </View>
 
-        <Text style={localStyles.sectionHeader}>{t('recovery_phrase')}</Text>
-        <View style={localStyles.card}>
-          <View style={localStyles.secretCardHeader}>
-            <Text style={localStyles.secretCardTitle}>{wordCount > 0 ? `${wordCount} Words` : "Secret Phrase"}</Text>
-            <TouchableOpacity onPress={() => setShowMnemonic(!showMnemonic)} style={localStyles.toggleBtn}>
-              <Text style={localStyles.toggleBtnText}>{showMnemonic ? t('hide') : t('show')}</Text>
-            </TouchableOpacity>
-          </View>
-          {showMnemonic && (
-            <View style={localStyles.secretContent}>
-              <Text style={localStyles.secretText}>{wallet?.mnemonic || "Unavailable"}</Text>
+        {/* Seed Vault利用時は「シークレットフレーズ」「秘密鍵」メニューを隠す */}
+        {!isSeedVault && (
+          <>
+            <Text style={localStyles.sectionHeader}>{t('recovery_phrase')}</Text>
+            <View style={localStyles.card}>
+              <View style={localStyles.secretCardHeader}>
+                <Text style={localStyles.secretCardTitle}>{wordCount > 0 ? `${wordCount} Words` : "Secret Phrase"}</Text>
+                <TouchableOpacity onPress={() => setShowMnemonic(!showMnemonic)} style={localStyles.toggleBtn}>
+                  <Text style={localStyles.toggleBtnText}>{showMnemonic ? t('hide') : t('show')}</Text>
+                </TouchableOpacity>
+              </View>
+              {showMnemonic && (
+                <View style={localStyles.secretContent}>
+                  <Text style={localStyles.secretText}>{wallet?.mnemonic || "Unavailable"}</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        <Text style={localStyles.sectionHeader}>{t('private_key')}</Text>
-        <View style={localStyles.card}>
-          <View style={localStyles.secretCardHeader}>
-            <Text style={localStyles.secretCardTitle}>{t('raw_key')}</Text>
-            <TouchableOpacity onPress={() => setShowKey(!showKey)} style={localStyles.toggleBtn}>
-              <Text style={localStyles.toggleBtnText}>{showKey ? t('hide') : t('show')}</Text>
-            </TouchableOpacity>
-          </View>
-          {showKey && wallet?.secretKey && (
-            <View style={localStyles.secretContent}>
-              <Text style={localStyles.secretText}>{secretKeyToString(wallet.secretKey)}</Text>
+            <Text style={localStyles.sectionHeader}>{t('private_key')}</Text>
+            <View style={localStyles.card}>
+              <View style={localStyles.secretCardHeader}>
+                <Text style={localStyles.secretCardTitle}>{t('raw_key')}</Text>
+                <TouchableOpacity onPress={() => setShowKey(!showKey)} style={localStyles.toggleBtn}>
+                  <Text style={localStyles.toggleBtnText}>{showKey ? t('hide') : t('show')}</Text>
+                </TouchableOpacity>
+              </View>
+              {showKey && wallet?.secretKey && (
+                <View style={localStyles.secretContent}>
+                  <Text style={localStyles.secretText}>{secretKeyToString(wallet.secretKey)}</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
+          </>
+        )}
 
         <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
         <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={confirm.confirmText} cancelText={t('cancel')} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
@@ -153,7 +155,6 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   );
 };
 
-// --- ネットワーク設定画面 ---
 export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRpc, setRpc, onBack }: any) => {
   const insets = useSafeAreaInsets();
   const adUnitId = useMemo(() => {
@@ -219,7 +220,6 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, currentRp
   );
 };
 
-// --- 言語設定画面 ---
 export const LanguageScreen = ({ onBack, onChange, currentLang }: any) => {
   const insets = useSafeAreaInsets();
   const adUnitId = useMemo(() => {
@@ -274,7 +274,6 @@ const langs = [
   );
 };
 
-// --- ヘルプ画面 ---
 export const HelpScreen = ({ t, onBack }: any) => {
   const insets = useSafeAreaInsets();
   const adUnitId = useMemo(() => {
@@ -283,13 +282,14 @@ export const HelpScreen = ({ t, onBack }: any) => {
   }, []);
   const showBanner = adUnitId.length > 0;
 
-  // ★ ここでFAQの並び順を整理
   const items = [
     {icon:RefreshCw, color:'#a855f7', bg:'rgba(168, 85, 247, 0.1)', t:'faq_restore'}, 
     {icon:TrendingUp, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_stake'},
     {icon:Percent, color:'#22c55e', bg:'rgba(34, 197, 94, 0.1)', t:'faq_apy'}, 
     {icon: Info, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'help_faq_staking_title', descKey: 'help_faq_staking_answer'},
     {icon: ImageIcon, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', titleKey: 'faq_nft_send_title', descKey: 'faq_nft_send_desc'},
+    {icon: ImageIcon, color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', titleKey: 'faq_nft_bg_title', descKey: 'faq_nft_bg_desc'},
+    {icon: Flame, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', titleKey: 'faq_nft_burn_title', descKey: 'faq_nft_burn_desc'},
     {icon:Zap, color:'#eab308', bg:'rgba(234, 179, 8, 0.1)', t:'faq_fee'},
     {icon:ShieldCheck, color:'#ef4444', bg:'rgba(239, 68, 68, 0.1)', t:'faq_device'}, 
     {icon:Wallet, color:'#3b82f6', bg:'rgba(59, 130, 246, 0.1)', t:'faq_bank'},
@@ -327,7 +327,6 @@ export const HelpScreen = ({ t, onBack }: any) => {
   );
 };
 
-// --- アバウト画面 ---
 export const AboutScreen = ({ t, onBack }: any) => {
   const insets = useSafeAreaInsets();
   const adUnitId = useMemo(() => {
@@ -351,7 +350,6 @@ export const AboutScreen = ({ t, onBack }: any) => {
 
         <Text style={localStyles.sectionHeader}>Links & Info</Text>
         <View style={localStyles.card}>
-           {/* YouTubeのSettingItemを削除し、GitHubのみにしました */}
            <SettingItem icon={Github} title="Official GitHub" desc="Open Source" onPress={() => Linking.openURL(GITHUB_URL)} color="rgba(255, 255, 255, 0.1)" iconColor="#fff" />
            <SettingItem icon={Info} title={t('terms')} desc={t('terms_desc')} onPress={() => setModalVisible(true)} isLast={true} />
         </View>
@@ -388,7 +386,6 @@ export const AboutScreen = ({ t, onBack }: any) => {
   );
 };
 
-// モダンUI共通のスタイル定義
 const localStyles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
@@ -445,7 +442,6 @@ const localStyles = StyleSheet.create({
     color: '#aaa',
     fontSize: 13,
   },
-  
   secretCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -484,7 +480,6 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
   },
-
   helpItem: {
     padding: 16,
   },
@@ -505,7 +500,6 @@ const localStyles = StyleSheet.create({
     lineHeight: 20,
     paddingLeft: 44,
   },
-
   bannerContainer: {
     position: 'absolute',
     left: 0,

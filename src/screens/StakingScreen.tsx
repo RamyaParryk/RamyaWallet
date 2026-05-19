@@ -6,14 +6,13 @@ import { Buffer } from 'buffer';
 
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
-import { SOL_MINT, SUPPORTED_LSTS } from '../constants/config';
-import { parseSolanaError } from '../utils/solanaUtils';
+// LST_APY_APIS をインポートに追加
+import { SOL_MINT, SUPPORTED_LSTS, JITO_SOL_MINT, MSOL_MINT, BSOL_MINT, LST_APY_APIS } from '../constants/config';
+import { signWithSeedVault, parseSolanaError } from '../utils/solanaUtils'; 
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 import { refreshAssetsService } from '../services/refreshAssets';
 import { jupiterQuoteApi } from '../services/jupiterService';
 import { TokenIcon } from '../components/TokenIcon';
-
-// ★ AssetStore から tokenMap を取得してオンチェーンデータを解決
 import { useAssetStore } from '../state/assetStore';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,12 +21,25 @@ import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
 
 const BANNER_ESTIMATED_HEIGHT = 60;
 
+// ネットワークの一時ブロックや遅延対策のためのタイムアウト付きフェッチ関数
+const fetchWithTimeout = async (url: string, ms = 5000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+
+  try {
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalance, onRetryFetch }: any) => {
   const insets = useSafeAreaInsets();
   const adUnitId = useMemo(() => (Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : ''), []);
   const showBanner = adUnitId.length > 0;
-
-  // ★ ストアから最新のトークン情報を取得
   const tokenMap = useAssetStore(state => state.tokenMap);
 
   const [amount, setAmount] = useState('');
@@ -38,49 +50,147 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
   const [showSuccess, setShowSuccess] = useState(false);
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
+  const [dynamicApys, setDynamicApys] = useState<Record<string, string>>({});
+
   const safeBalance = Number(solBalance) || 0;
 
+  // ==========================================
+  // ★ タイムアウト機能付き＆完全サイレントパース処理
+  // ==========================================
   useEffect(() => {
-    if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) {
-      setQuote(null);
-      return;
-    }
+    const fetchApys = async () => {
+      const newApys: Record<string, string> = {};
+
+      // ① Jito公式API
+      try {
+        const res = await fetchWithTimeout(LST_APY_APIS.JITO);
+        if (res.ok) {
+          const data = await res.json();
+          let apyValue = 0;
+          if (Array.isArray(data) && data.length > 0) {
+            apyValue = data[0].apy || data[0].apr || 0;
+          } else if (data && typeof data === 'object') {
+            apyValue = data.apy || data.apr || data.apr?.['1m'] || 0;
+          }
+          if (apyValue > 0) {
+            if (apyValue < 1) apyValue = apyValue * 100;
+            newApys[JITO_SOL_MINT] = apyValue.toFixed(2) + '%';
+          }
+        }
+      } catch (e: any){
+        console.log('[APY] 🤫 Jito fetch failed, using fallback:', e?.message || 'timeout');
+      }
+
+      // ② Marinade公式API (生テキストで返ってくる仕様への対応)
+      try {
+        const res = await fetchWithTimeout(LST_APY_APIS.MARINADE);
+        if (res.ok) {
+          const text = await res.text();
+          let apyValue = parseFloat(text.trim());
+          if (!isNaN(apyValue) && apyValue > 0) {
+            if (apyValue < 1) apyValue = apyValue * 100;
+            newApys[MSOL_MINT] = apyValue.toFixed(2) + '%';
+          }
+        }
+      } catch (e: any){
+        console.log('[APY] 🤫 Marinade fetch failed, using fallback:', e?.message || 'timeout');
+      }
+
+      // ③ SolBlaze公式API
+      try {
+        const res = await fetchWithTimeout(LST_APY_APIS.SOLBLAZE);
+        if (res.ok) {
+          const text = await res.text();
+          let apyValue = 0;
+          try {
+            const data = JSON.parse(text);
+            apyValue = data.apy || data.apr || 0;
+          } catch {
+            apyValue = parseFloat(text.trim());
+          }
+          if (!isNaN(apyValue) && apyValue > 0) {
+            if (apyValue < 1) apyValue = apyValue * 100;
+            newApys[BSOL_MINT] = apyValue.toFixed(2) + '%';
+          }
+        }
+      } catch (e: any){
+        console.log('[APY] 🤫 SolBlaze fetch failed, using fallback:', e?.message || 'timeout');
+      }
+
+      if (Object.keys(newApys).length > 0) {
+        setDynamicApys(prev => ({ ...prev, ...newApys }));
+      }
+    };
+
+    fetchApys();
+  }, []);
+
+  // ==========================================
+  // ★ ルート取得 (Jupiter)
+  // ==========================================
+  useEffect(() => {
+    if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) return setQuote(null);
     const fetchQuote = async () => {
       setLoading(true);
       try {
         const inputLamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
-        const q = await jupiterQuoteApi.quoteGet({
-          inputMint: SOL_MINT,
-          outputMint: selectedLST.mint,
-          amount: inputLamports,
-          slippageBps: 50,
-        });
-        setQuote(q);
+        setQuote(await jupiterQuoteApi.quoteGet({ inputMint: SOL_MINT, outputMint: selectedLST.mint, amount: inputLamports, slippageBps: 50 }));
       } catch (e) { setQuote(null); } finally { setLoading(false); }
     };
     const timer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timer);
   }, [amount, selectedLST]);
 
+  // ==========================================
+  // ★ ステーキング実行
+  // ==========================================
   const doStake = async () => {
     if (!wallet || !quote || !connection) return;
     setLoading(true);
     try {
-      const result = await jupiterQuoteApi.swapPost({
-        swapRequest: {
-          quoteResponse: quote,
-          userPublicKey: wallet.address,
-          wrapAndUnwrapSol: true,
-          dynamicComputeUnitLimit: true as any,
+      // 最強の商用ウォレット最適化パラメータ（v6）
+        const requestParams: any = {
+        quoteResponse: quote,
+        userPublicKey: wallet.address,
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true as any,
+        
+        // SDKのバグを回避するため、文字列 "auto" ではなくオブジェクト形式にする
+        prioritizationFeeLamports: {
+          priorityLevelWithMaxLamports: { priorityLevel: "high", maxLamports: 5000000 }
+        },
+        
+        dynamicSlippage: true,          // スリッページエラー防止
+        useSharedAccounts: true,        // 中間ATA作成費用の回避（超重要）
+        skipUserAccountsRpcCalls: true, // 速度向上
+      };
+
+      let result;
+      try {
+        result = await jupiterQuoteApi.swapPost({ swapRequest: requestParams });
+      } catch (apiError: any) {
+        if (apiError.response && typeof apiError.response.json === 'function') {
+          const errBody = await apiError.response.json();
+          throw new Error(errBody?.error || 'Jupiter API Rejected');
         }
-      });
+        throw apiError;
+      }
 
       if (!result?.swapTransaction) throw new Error("Failed to get transaction");
-      const transaction = VersionedTransaction.deserialize(Buffer.from(result.swapTransaction, 'base64'));
-      if (!wallet.secretKey) throw new Error("Wallet not loaded");
-      transaction.sign([Keypair.fromSecretKey(wallet.secretKey)]);
+
+      const txBytes = new Uint8Array(Buffer.from(result.swapTransaction, 'base64'));
+      let txid = '';
+
+      if (wallet.walletType === 'seed-vault') {
+        const signedTxBytes = await signWithSeedVault(txBytes, wallet);
+        txid = await connection.sendRawTransaction(signedTxBytes, { skipPreflight: false });
+      } else {
+        if (!wallet.secretKey) throw new Error("Wallet not loaded");
+        const transaction = VersionedTransaction.deserialize(txBytes);
+        transaction.sign([Keypair.fromSecretKey(wallet.secretKey)]);
+        txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false });
+      }
       
-      const txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true });
       notify(t('processing'));
       await connection.confirmTransaction(txid, 'confirmed');
 
@@ -89,87 +199,65 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
       setQuote(null);
       refreshAssetsService({ force: true });
     } catch (e: any) {
-      setAlert({ visible: true, title: t('stake_failed'), message: parseSolanaError(e, t) });
+      console.error("🔥 [STAKE FATAL ERROR]", e);
+      setAlert({ visible: true, title: t('error') || 'Error', message: parseSolanaError(e, t) });
     } finally { setLoading(false); }
   };
 
   const estimatedOut = quote ? (Number(quote.outAmount) / 10**9).toFixed(4) : "0.00";
-  
-  // 選択中トークンの動的情報
   const activeTokenInfo = tokenMap.get(selectedLST.mint);
   const activeSymbol = activeTokenInfo?.symbol || selectedLST.fallbackSymbol;
+  
+  const displayApy = dynamicApys[selectedLST.mint] || selectedLST.fallbackApy;
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('staking_btn')} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
-        
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
         <Text style={localStyles.sectionLabel}>{t('select_staking_asset') || 'Select Asset'}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={localStyles.lstSelector}>
           {SUPPORTED_LSTS.map((lst) => {
             const tokenInfo = tokenMap.get(lst.mint);
             const symbol = tokenInfo?.symbol || lst.fallbackSymbol;
-            const logoURI = tokenInfo?.logoURI;
             const isActive = selectedLST.mint === lst.mint;
-
             return (
-              <TouchableOpacity 
-                key={lst.mint} 
-                onPress={() => { setSelectedLST(lst); setQuote(null); }}
-                style={[localStyles.lstChip, isActive && localStyles.lstChipActive]}
-              >
-                <TokenIcon uri={logoURI} mint={lst.mint} symbol={symbol} size={26} />
+              <TouchableOpacity key={lst.mint} onPress={() => { setSelectedLST(lst); setQuote(null); }} style={[localStyles.lstChip, isActive && localStyles.lstChipActive]}>
+                <TokenIcon uri={tokenInfo?.logoURI} mint={lst.mint} symbol={symbol} size={26} />
                 <Text style={localStyles.lstChipText}>{symbol}</Text>
                 {isActive && <Check size={14} color="#a855f7" style={{marginLeft: 6}} />}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
-
         <View style={localStyles.card}>
-          <View style={localStyles.cardHeader}>
-            <Text style={localStyles.label}>{t('deposit')} (SOL)</Text>
-            <Text style={localStyles.balanceText}>{t('available')}: {safeBalance.toFixed(4)}</Text>
-          </View>
+          <View style={localStyles.cardHeader}><Text style={localStyles.label}>{t('deposit')} (SOL)</Text><Text style={localStyles.balanceText}>{t('available')}: {safeBalance.toFixed(4)}</Text></View>
           <TextInput style={localStyles.amountInput} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
-        </View>
-
-        <View style={{ alignItems: 'center', marginVertical: -10, zIndex: 10 }}>
-          <View style={localStyles.arrowCircle}><ArrowDown size={20} color="#666" /></View>
-        </View>
-
-        <View style={[localStyles.card, { paddingTop: 24 }]}>
-          <View style={localStyles.cardHeader}>
-            <Text style={localStyles.label}>{t('receive_lbl')} ({activeSymbol})</Text>
-            <Text style={localStyles.apyText}>{selectedLST.apy} APY</Text>
+          
+          <View style={localStyles.percentRow}>
+            {[10, 50, 100].map((p) => (
+              <TouchableOpacity key={p} onPress={() => {
+                  let final = safeBalance * (p / 100);
+                  if (p === 100) final = Math.max(0, final - 0.01);
+                  setAmount(final.toFixed(6).replace(/\.?0+$/, ''));
+                }} style={localStyles.percentBtn}>
+                <Text style={localStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </View>
+        <View style={{ alignItems: 'center', marginVertical: -10, zIndex: 10 }}><View style={localStyles.arrowCircle}><ArrowDown size={20} color="#666" /></View></View>
+        <View style={[localStyles.card, { paddingTop: 24 }]}>
+          <View style={localStyles.cardHeader}><Text style={localStyles.label}>{t('receive_lbl')} ({activeSymbol})</Text><Text style={localStyles.apyText}>{displayApy} APY</Text></View>
           {loading ? <ActivityIndicator color="#a855f7" style={{alignSelf: 'flex-end', marginVertical: 10}} /> : <Text style={localStyles.amountInput}>{estimatedOut}</Text>}
         </View>
-
-        <TouchableOpacity 
-          style={[styles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 30 }]} 
-          disabled={!quote || loading} 
-          onPress={() => setShowConfirm(true)}
-        >
+        <TouchableOpacity style={[styles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 30 }]} disabled={!quote || loading} onPress={() => quote && setShowConfirm(true)}>
           <Text style={styles.primaryButtonText}>{t('staking_btn')}</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      <ConfirmModal 
-        visible={showConfirm} 
-        title={t('confirm_stake_title')} 
-        message={`${amount} SOL -> ${estimatedOut} ${activeSymbol}`} 
-        onCancel={() => setShowConfirm(false)} 
-        onConfirm={() => { setShowConfirm(false); doStake(); }} 
-      />
+      <ConfirmModal visible={showConfirm} title={t('confirm_stake_title')} message={`${amount} SOL -> ${estimatedOut} ${activeSymbol}`} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doStake(); }} />
       <SuccessModal visible={showSuccess} message={t('stake_success_msg')} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
-
-      {showBanner ? (
-        <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}>
-          <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
-        </View>
-      ) : null}
+      {showBanner && <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
     </View>
   );
 };
@@ -188,4 +276,7 @@ const localStyles = StyleSheet.create({
   amountInput: { fontSize: 32, color: '#fff', fontWeight: 'bold', textAlign: 'right', padding: 0 },
   arrowCircle: { backgroundColor: '#111', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   bannerContainer: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'flex-end', paddingTop: 8, backgroundColor: 'rgba(0,0,0,0.8)' },
+  percentRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  percentBtn: { backgroundColor: '#2a2a2a', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#444' },
+  percentText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold' },
 });

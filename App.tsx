@@ -4,15 +4,16 @@ import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator, ImageBackground, DeviceEventEmitter, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator, ImageBackground, DeviceEventEmitter, StyleSheet, Alert, PermissionsAndroid } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import 'text-encoding-polyfill';
 
 import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SeedVault } from '@solana-mobile/seed-vault-lib';
 
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
@@ -49,7 +50,7 @@ import mobileAds from 'react-native-google-mobile-ads';
 
 import { useUIStore } from './src/state/uiStore';
 import { useSettingsStore } from './src/state/settingsStore';
-import { useWalletStore } from './src/state/walletStore';
+import { useWalletStore, WalletData } from './src/state/walletStore';
 import { useAssetStore } from './src/state/assetStore';
 import { useContactsStore } from './src/state/contactsStore';
 import { useConnectionStore } from './src/state/connectionStore';
@@ -253,7 +254,6 @@ export default function App() {
       await fetchTokens();
       try { initConnection?.(); } catch {}
 
-      // ★ 追加: アプリ起動時にWalletConnectを初期化し、通信をスタンバイ
       useWalletConnectStore.getState().initWalletConnect();
 
       const hasWallet = !!useWalletStore.getState().wallet;
@@ -331,12 +331,17 @@ export default function App() {
       const path = "m/44'/501'/0'/0'";
       const derivedSeed = derivePath(path, seed.toString('hex')).key;
       const keypair = Keypair.fromSeed(derivedSeed);
-      const newWallet = { address: keypair.publicKey.toBase58(), secretKey: keypair.secretKey, mnemonic: mnemonicInput };
-      setWallet(newWallet as any); setPin(null); setBiometricsEnabled(false); setPendingBioEnable(false);
+      const newWallet: WalletData = { 
+        address: keypair.publicKey.toBase58(), 
+        secretKey: keypair.secretKey, 
+        mnemonic: mnemonicInput,
+        walletType: 'local'
+      };
+      setWallet(newWallet); setPin(null); setBiometricsEnabled(false); setPendingBioEnable(false);
       await persistWallet(newWallet); await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' });
       setBootSyncDone(false); bootSyncStartedRef.current = false;
       animatedSetScreen('main'); showNotification(t('wallet_restored')); return true;
-    } catch (e) { showNotification(t('error')); return false; }
+    } catch (e) { showNotification(t('error') || 'Error'); return false; }
   }, [persistSettings, persistWallet, setBiometricsEnabled, setPendingBioEnable, setPin, animatedSetScreen, setWallet, showNotification, t]);
 
   const createWallet = useCallback(async () => {
@@ -347,15 +352,205 @@ export default function App() {
       const path = "m/44'/501'/0'/0'";
       const derivedSeed = derivePath(path, seed.toString('hex')).key;
       const keypair = Keypair.fromSeed(derivedSeed);
-      const newWallet = { address: keypair.publicKey.toBase58(), secretKey: keypair.secretKey, mnemonic };
-      setWallet(newWallet as any); animatedSetScreen('create');
-    } catch (e) { showNotification(t('create_error')); animatedSetScreen('welcome'); }
+      const newWallet: WalletData = { 
+        address: keypair.publicKey.toBase58(), 
+        secretKey: keypair.secretKey, 
+        mnemonic,
+        walletType: 'local'
+      };
+      setWallet(newWallet); animatedSetScreen('create');
+    } catch (e) { showNotification(t('create_error') || 'Error'); animatedSetScreen('welcome'); }
   }, [animatedSetScreen, setWallet, showNotification, t]);
+
+  const createWalletWithSeedVault = useCallback(async () => {
+    const SV: any = SeedVault;
+  
+    const toBase58PublicKey = (value: any): string => {
+      if (!value) return '';
+  
+      const raw =
+        value.publicKeyEncoded ??
+        value.publicKey ??
+        value.address ??
+        value;
+  
+      if (typeof raw === 'string') {
+        try {
+          return new PublicKey(raw).toBase58();
+        } catch {
+          return new PublicKey(Buffer.from(raw, 'base64')).toBase58();
+        }
+      }
+  
+      if (raw?.buffer) {
+        return new PublicKey(new Uint8Array(raw.buffer)).toBase58();
+      }
+  
+      if (Array.isArray(raw)) {
+        return new PublicKey(new Uint8Array(raw)).toBase58();
+      }
+  
+      if (typeof raw === 'object') {
+        return new PublicKey(new Uint8Array(Object.values(raw))).toBase58();
+      }
+  
+      return '';
+    };
+  
+    const getAuthToken = (seed: any): number | string | null => {
+      const token =
+        seed?.authToken ??
+        seed?.auth_token ??
+        seed?.authorizationToken ??
+        seed;
+  
+      if (typeof token === 'number' || typeof token === 'string') {
+        return token;
+      }
+  
+      return null;
+    };
+  
+    try {
+      const available = await SeedVault.isSeedVaultAvailable(false);
+      if (!available) {
+        throw new Error('Seed Vault is not available on this device.');
+      }
+  
+      const granted = await PermissionsAndroid.request(
+        'com.solanamobile.seedvault.ACCESS_SEED_VAULT' as any
+      );
+  
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert(t('error') || 'Error', t('seed_vault_permission_denied') || 'Seed Vault permission denied.');
+        return;
+      }
+  
+      let authResponse: any = null;
+  
+      // 1. まず既に許可されているシードを探す
+      if (typeof SV.getAuthorizedSeeds === 'function') {
+        const seeds = await SV.getAuthorizedSeeds();
+        if (seeds && seeds.length > 0) {
+          authResponse = seeds[0];
+        }
+      }
+  
+      // 2. まだ許可されていなければ、堂々とUIを呼び出してユーザーに指紋認証を求める
+      if (!authResponse) {
+        console.log("No authorized seeds found. Prompting UI...");
+        if (typeof SV.authorizeNewSeed === 'function') {
+          authResponse = await SV.authorizeNewSeed();
+        } else if (typeof SV.authorizeSeed === 'function') {
+          authResponse = await SV.authorizeSeed();
+        } else {
+          throw new Error('No method available to trigger Seed Vault authorization UI.');
+        }
+      }
+  
+      const authToken = getAuthToken(authResponse);
+  
+      if (authToken === null) {
+        throw new Error('Seed Vault auth token not found: ' + JSON.stringify(authResponse));
+      }
+  
+      await wait(500); // 画面遷移のアニメーション待機
+  
+      let accounts: any[] = [];
+  
+      if (typeof SV.getUserWallets === 'function') {
+        accounts = await SV.getUserWallets(authToken);
+      }
+  
+      if (!accounts || accounts.length === 0) {
+        if (typeof SV.getPublicKeys === 'function') {
+          const candidates = [
+            "m/44'/501'/0'",
+            "m/44'/501'/0'/0'",
+            "m/44'/501'/1'",
+            "m/44'/501'/1'/0'",
+          ];
+  
+          const publicKeys = await SV.getPublicKeys(authToken, candidates);
+          accounts = publicKeys.map((p: any, index: number) => ({
+            ...p,
+            derivationPath: p.resolvedDerivationPath ?? candidates[index],
+          }));
+        }
+      }
+  
+      // 万が一上記のAPIがダメだった場合の最強総当たりロジック
+      if (!accounts || accounts.length === 0) {
+        const tries = [
+          ['', ''],
+          ['public_key_encoded', ''],
+          ['purpose', '44'],
+          ['coin_type', '501'],
+          ['coinType', '501'],
+        ];
+        for (const [column, value] of tries) {
+          try {
+            const accs = await SV.getAccounts(authToken, column, value);
+            if (accs?.length) {
+              accounts = accs;
+              break;
+            }
+          } catch (e) { /* ignore SQL errors */ }
+        }
+      }
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No Seed Vault wallet accounts found. All methods failed.');
+      }
+  
+      const account = accounts[0];
+      const publicKeyStr = toBase58PublicKey(account);
+  
+      if (!publicKeyStr) {
+        throw new Error('Could not parse Seed Vault public key.');
+      }
+  
+      const newWallet: WalletData = {
+        address: publicKeyStr,
+        walletType: 'seed-vault',
+        authToken,
+        derivationPath:
+          account.derivationPath ??
+          account.resolvedDerivationPath ??
+          "m/44'/501'/0'",
+      };
+  
+      setWallet(newWallet as any);
+      await persistWallet(newWallet);
+      await persistSettings({
+        pin: null,
+        biometricsEnabled: true,
+        network: 'mainnet-beta',
+      });
+  
+      setBootSyncDone(false);
+      bootSyncStartedRef.current = false;
+      animatedSetScreen('main');
+      showNotification(t('seed_vault_connected') || 'Seed Vault connected 🛡️');
+  
+    } catch (e: any) {
+      console.log('Seed Vault Error:', e);
+      Alert.alert(t('error') || 'Error', e?.message || String(e));
+    }
+  }, [
+    animatedSetScreen,
+    setWallet,
+    persistWallet,
+    persistSettings,
+    showNotification,
+    t,
+  ]);
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'splash': return <SplashScreen />;
-      case 'welcome': return <WelcomeScreen t={t} onStart={() => animatedSetScreen('loading')} onImport={() => animatedSetScreen('import')} />;
+      case 'welcome': 
+        return <WelcomeScreen t={t} onStart={() => animatedSetScreen('loading')} onImport={() => animatedSetScreen('import')} onStartSeedVault={createWalletWithSeedVault} />;
       case 'loading': return <LoadingScreen t={t} onFinish={createWallet} />;
       case 'create': return <CreateWalletScreen t={t} wallet={wallet} onConfirm={async () => { if (wallet) await persistWallet(wallet); await persistSettings({ pin: null, biometricsEnabled: false, network: 'mainnet-beta' }); setBootSyncDone(false); bootSyncStartedRef.current = false; animatedSetScreen('main'); }} />;
       case 'import': return <ImportWalletScreen t={t} onBack={() => animatedSetScreen('welcome')} onImport={generateWalletFromMnemonic} />;
@@ -435,7 +630,6 @@ export default function App() {
           {renderScreen()}
           <ConfirmModal visible={logoutConfirm} title={t('logout_confirm_title')} message={t('logout_confirm_desc')} cancelText={t('cancel')} confirmText={t('delete')} onCancel={closeLogoutConfirm} onConfirm={executeLogout} />
           
-          {/* WalletConnectの待受モーダル（アプリの最前面に常に配置） */}
           <WalletConnectModals />
 
         </SafeAreaView>

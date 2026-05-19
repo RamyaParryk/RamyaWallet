@@ -3,9 +3,13 @@ import { Core } from '@walletconnect/core';
 import { Web3Wallet, IWeb3Wallet } from '@walletconnect/web3wallet';
 import { REOWN } from '@env';
 
-// 署名用のライブラリ
 import bs58 from 'bs58';
 import nacl from 'tweetnacl';
+import { Buffer } from 'buffer';
+import { VersionedTransaction, Keypair } from '@solana/web3.js';
+
+import { SeedVault } from '@solana-mobile/seed-vault-lib';
+import { useConnectionStore } from './connectionStore';
 
 export const WALLETCONNECT_PROJECT_ID = REOWN || ''; 
 
@@ -21,8 +25,7 @@ interface WalletConnectState {
   approveSession: (proposal: any, userAddress: string) => Promise<void>;
   rejectSession: (proposal: any) => Promise<void>;
   
-  // トランザクション・メッセージ署名用の関数
-  approveRequest: (request: any, secretKey: Uint8Array) => Promise<void>;
+  approveRequest: (request: any, wallet: any) => Promise<void>;
   rejectRequest: (request: any) => Promise<void>;
 }
 
@@ -51,7 +54,6 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
         set((state) => ({ pendingSessionProposals: [...state.pendingSessionProposals, proposal] }));
       });
 
-      // 「署名要求」が飛んでくる
       web3wallet.on('session_request', (request) => {
         set((state) => ({ pendingRequests: [...state.pendingRequests, request] }));
       });
@@ -107,10 +109,7 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
     set((state) => ({ pendingSessionProposals: state.pendingSessionProposals.filter(p => p.id !== proposal.id) }));
   },
 
-  // ==========================================
-  // ★ 署名要求 (Sign Message) の承認処理
-  // ==========================================
-  approveRequest: async (request: any, secretKey: Uint8Array) => {
+  approveRequest: async (request: any, wallet: any) => {
     const { web3wallet } = get();
     if (!web3wallet) return;
 
@@ -121,18 +120,61 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
       let result: any = null;
 
       if (method === 'solana_signMessage') {
-        // dAppから送られてきたメッセージを解読して署名する
         const msgString = reqParams.message || reqParams.pubkey; 
         let msgBytes: Uint8Array;
         try { msgBytes = bs58.decode(msgString); } catch { msgBytes = Buffer.from(msgString, 'utf8'); }
         
-        // 自分の秘密鍵でサイン（署名）
-        const signatureBytes = nacl.sign.detached(msgBytes, secretKey);
-        result = { signature: bs58.encode(signatureBytes) };
+        if (wallet.walletType === 'seed-vault') {
+          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
+          const signatures = await SeedVault.signMessages(wallet.authToken, [derivationPath], [msgBytes]);
+          const signatureBytes = new Uint8Array(signatures[0]);
+          result = { signature: bs58.encode(signatureBytes) };
+        } else {
+          if (!wallet.secretKey) throw new Error("Secret key is missing");
+          const signatureBytes = nacl.sign.detached(msgBytes, wallet.secretKey);
+          result = { signature: bs58.encode(signatureBytes) };
+        }
       } 
-      // ※今後トランザクション署名(solana_signTransaction)もここに追加
+      else if (method === 'solana_signTransaction') {
+        const txString = reqParams.transaction || reqParams.transactions?.[0];
+        let txBytes: Uint8Array;
+        try { txBytes = bs58.decode(txString); } catch { txBytes = Buffer.from(txString, 'base64'); }
 
-      // 署名結果をdApp(pump.fun)に送る！
+        if (wallet.walletType === 'seed-vault') {
+          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
+          const signedPayloads = await SeedVault.signTransactions(wallet.authToken, [derivationPath], [txBytes]);
+          const signedTxBytes = new Uint8Array(signedPayloads[0]);
+          result = { signature: bs58.encode(signedTxBytes) };
+        } else {
+          if (!wallet.secretKey) throw new Error("Secret key is missing");
+          const transaction = VersionedTransaction.deserialize(txBytes);
+          transaction.sign([Keypair.fromSecretKey(wallet.secretKey)]);
+          result = { signature: bs58.encode(transaction.serialize()) };
+        }
+      }
+      else if (method === 'solana_signAndSendTransaction') {
+        const txString = reqParams.transaction || reqParams.transactions?.[0];
+        let txBytes: Uint8Array;
+        try { txBytes = bs58.decode(txString); } catch { txBytes = Buffer.from(txString, 'base64'); }
+
+        const connection = useConnectionStore.getState().connection;
+        if (!connection) throw new Error("Connection not established");
+
+        let txid = '';
+        if (wallet.walletType === 'seed-vault') {
+          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
+          const signedPayloads = await SeedVault.signTransactions(wallet.authToken, [derivationPath], [txBytes]);
+          const signedTxBytes = new Uint8Array(signedPayloads[0]);
+          txid = await connection.sendRawTransaction(signedTxBytes, { skipPreflight: true });
+        } else {
+          if (!wallet.secretKey) throw new Error("Secret key is missing");
+          const transaction = VersionedTransaction.deserialize(txBytes);
+          transaction.sign([Keypair.fromSecretKey(wallet.secretKey)]);
+          txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: true });
+        }
+        result = { signature: txid };
+      }
+
       await web3wallet.respondSessionRequest({
         topic,
         response: { id, jsonrpc: '2.0', result }
@@ -141,21 +183,23 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
       set((state) => ({ pendingRequests: state.pendingRequests.filter(r => r.id !== id) }));
     } catch (error) {
       console.error("Approve Request Error:", error);
+      await get().rejectRequest(request);
     }
   },
 
-  // ==========================================
-  // 署名要求の拒否処理
-  // ==========================================
   rejectRequest: async (request: any) => {
     const { web3wallet } = get();
     if (!web3wallet) return;
     const { topic, id } = request;
 
-    await web3wallet.respondSessionRequest({
-      topic,
-      response: { id, jsonrpc: '2.0', error: { code: 5000, message: 'User rejected the request.' } }
-    });
+    try {
+      await web3wallet.respondSessionRequest({
+        topic,
+        response: { id, jsonrpc: '2.0', error: { code: 5000, message: 'User rejected the request.' } }
+      });
+    } catch (error) {
+      console.log("Reject Request Error:", error);
+    }
 
     set((state) => ({ pendingRequests: state.pendingRequests.filter(r => r.id !== id) }));
   }

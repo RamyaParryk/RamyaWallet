@@ -1,8 +1,7 @@
 import { createJupiterApiClient } from '@jup-ag/api';
 import {
-  JUPITER_PRICE_API,
   MAINNET_RPC_URL,
-  JUPITER_BASE_PATH,
+  JUPITER_PRICE_API,
   MY_PLATFORM_FEE_BPS,
   MY_FEE_ACCOUNT,
   JUPITER_API_KEY,
@@ -20,26 +19,15 @@ function maskKey(key: string) {
   return `${key.slice(0, 4)}…${key.slice(-4)}`;
 }
 
-async function safeReadText(res: Response) {
-  try {
-    const t = await res.text();
-    return t.length > 250 ? t.slice(0, 250) + '…' : t;
-  } catch { return '(failed to read body)'; }
-}
-
+// ★ 新しいAPIキーをヘッダーにセット
 const GET_HEADERS: Record<string, string> = {
   Accept: 'application/json',
   ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
 };
 
-const POST_HEADERS: Record<string, string> = {
-  Accept: 'application/json',
-  'Content-Type': 'application/json',
-  ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
-};
-
+// ★ basePathを最新の「Jupiter v6」エンドポイントに固定
 export const jupiterQuoteApi = createJupiterApiClient({
-  basePath: JUPITER_BASE_PATH,
+  basePath: 'https://quote-api.jup.ag/v6',
   fetchApi: (url, init) => fetch(url, { 
     ...init, 
     headers: { 
@@ -50,7 +38,8 @@ export const jupiterQuoteApi = createJupiterApiClient({
   }),
 });
 
-const JUPITER_TOKENS_V2_VERIFIED = 'https://api.jup.ag/tokens/v2/tag?query=verified';
+// トークンリストも最新のグローバルCDN（APIキー不要）に変更
+const JUPITER_TOKENS_V6_VERIFIED = 'https://tokens.jup.ag/tokens?tags=verified';
 
 export type TokenInfo = { address: string; symbol: string; name: string; decimals: number; logoURI: string; tags?: string[]; };
 
@@ -92,14 +81,15 @@ function loadLocalTokens(): TokenInfo[] {
 }
 
 async function loadJupiterVerifiedTokens(): Promise<TokenInfo[] | null> {
-  if (!JUPITER_API_KEY) return null;
-  const res = await fetch(JUPITER_TOKENS_V2_VERIFIED, { headers: GET_HEADERS });
-  if (!res.ok) return null;
-  const json: any = await res.json().catch(() => null); // ★修正
-  if (!Array.isArray(json)) return null;
-  const unique = dedupe(json.map(normalizeToken).filter(Boolean) as TokenInfo[]);
-  if (unique.length < 50) return null;
-  return unique;
+  try {
+    const res = await fetch(JUPITER_TOKENS_V6_VERIFIED, { headers: GET_HEADERS });
+    if (!res.ok) return null;
+    const json: any = await res.json().catch(() => null);
+    if (!Array.isArray(json)) return null;
+    const unique = dedupe(json.map(normalizeToken).filter(Boolean) as TokenInfo[]);
+    if (unique.length < 50) return null;
+    return unique;
+  } catch { return null; }
 }
 
 export const fetchTokenList = async (): Promise<TokenInfo[]> => {
@@ -123,7 +113,7 @@ export const fetchOnChainMetadata = async (mint: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 'get-asset', method: 'getAsset', params: { id: mint } }),
     });
-    const json: any = await response.json().catch(() => null); // ★修正
+    const json: any = await response.json().catch(() => null);
     if (!json?.result) return null;
     const logo = normalizeLogoUri(json.result.content?.links?.image || json.result.content?.metadata?.image || json.result.content?.files?.[0]?.uri || '');
     return { name: json.result.content?.metadata?.name || 'Unknown', symbol: json.result.content?.metadata?.symbol || '???', logoURI: logo, status: 'verified' };
@@ -143,7 +133,7 @@ export const fetchPrices = async (ids: string) => {
         headers: { 'x-cg-demo-api-key': COIN_GENKO_API_KEY || '' }
       });
       if (solRes.ok) {
-        const solData: any = await solRes.json(); // ★修正
+        const solData: any = await solRes.json();
         if (solData.solana?.usd) {
           priceMap[SOL_MINT] = { price: String(solData.solana.usd) };
           priceMap['native-stake'] = { price: String(solData.solana.usd) };
@@ -171,7 +161,7 @@ export const fetchPrices = async (ids: string) => {
   try {
     const res = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`, { headers: GET_HEADERS });
     if (res.ok) {
-      const json: any = await res.json(); // ★修正
+      const json: any = await res.json();
       if (json?.data) return json.data;
     }
   } catch (e) { }
@@ -182,14 +172,22 @@ export const getQuote = async (inputMint: string, outputMint: string, amount: nu
   try { return await jupiterQuoteApi.quoteGet({ inputMint, outputMint, amount, slippageBps: 100, platformFeeBps: MY_PLATFORM_FEE_BPS }); } catch (e) { return null; }
 };
 
+// ★ 手動のfetch POSTを廃止し、公式SDKのswapPostに一本化（これで完全にv6になります）
 export const getSwapTransaction = async (quoteResponse: any, userPublicKey: string, options: any = {}) => {
   try {
-    const body = { quoteResponse, userPublicKey, wrapAndUnwrapSol: true, ...(MY_FEE_ACCOUNT ? { feeAccount: MY_FEE_ACCOUNT } : {}), ...options };
-    const response = await fetch(`${JUPITER_BASE_PATH}/swap`, { method: 'POST', headers: POST_HEADERS, body: JSON.stringify(body) });
-    if (!response.ok) return null;
-    const json: any = await response.json(); // ★修正
-    return json?.swapTransaction ?? null;
-  } catch (error) { return null; }
+    const swapRequest = {
+      quoteResponse,
+      userPublicKey,
+      wrapAndUnwrapSol: true,
+      ...(MY_FEE_ACCOUNT ? { feeAccount: MY_FEE_ACCOUNT } : {}),
+      ...options
+    };
+    const result = await jupiterQuoteApi.swapPost({ swapRequest });
+    return result?.swapTransaction ?? null;
+  } catch (error) { 
+    console.error(`${LOG.jup} ❌ Swap TX Error:`, error);
+    return null; 
+  }
 };
 
 export const warmupNetwork = async () => { try { await fetch('https://www.google.com', { method: 'HEAD' }); } catch {} };

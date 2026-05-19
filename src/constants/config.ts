@@ -35,11 +35,19 @@ export const TOKEN_LIST_URL = 'https://raw.githubusercontent.com/RamyaParryk/Ram
 
 export const COINGECKO_PRICE_API = 'https://api.coingecko.com/api/v3/simple/price?ids=solana,usd-coin,tether,jito-staked-sol,bonk,render-token,helium,drift-protocol,kamino&vs_currencies=usd';
 
+// apy を fallbackApy に変更
 export const SUPPORTED_LSTS = [
-  { mint: JITO_SOL_MINT, fallbackSymbol: 'JitoSOL', apy: '7.8%' },
-  { mint: MSOL_MINT, fallbackSymbol: 'mSOL', apy: '7.5%' },
-  { mint: BSOL_MINT, fallbackSymbol: 'bSOL', apy: '8.2%' }
+  { mint: JITO_SOL_MINT, fallbackSymbol: 'JitoSOL', fallbackApy: '6.2%' },
+  { mint: MSOL_MINT, fallbackSymbol: 'mSOL', fallbackApy: '5.95%' },
+  { mint: BSOL_MINT, fallbackSymbol: 'bSOL', fallbackApy: '6.01%' }
 ];
+
+export const LST_APY_APIS = {
+  SANCTUM: 'https://extra-api.sanctum.so/v1/apy/latest', // 🌟 メイン（これ1つで全部取れる）
+  JITO: 'https://api.jito.network/api/v1/apys', // 予備（弾かれやすい）
+  MARINADE: 'https://api.marinade.finance/msol/apy/30d', // 予備（生テキスト）
+  SOLBLAZE: 'https://stake.solblaze.org/api/v1/apy', // 🌟 予備（検証済みの通るURL！）
+};
 
 export const YOUTUBE_URL = "https://www.youtube.com/@ramyaparryk";
 export const GITHUB_URL = "https://ramyaparryk.github.io/RamyaWallet/";

@@ -64,7 +64,7 @@ const AssetItem: React.FC<AssetItemProps> = ({ asset, onNavigate }) => {
   );
 };
 
-// ★ SKRステーキング（本物）用の青色ハイライトデザインを復活
+// SKRステーキング（本物）用の青色ハイライトデザイン
 const StakedAssetCard = ({ asset }: { asset: any }) => {
   const isSkr = asset.mint === 'staked-skr';
 
@@ -172,7 +172,7 @@ export const DashboardScreen = ({ t, wallet, assets, totalValue, onNav, notify, 
     }
   };
 
-  // ★ 修正: LSTは通常のトークンとし、Native StakeとSKRステーキングのみを特別枠に
+  // LSTは通常のトークンとし、Native StakeとSKRステーキングのみを特別枠に
   const isStaked = useCallback((mint: string) => 
     mint === 'native-stake' || mint === 'staked-skr'
   , []);
@@ -304,7 +304,7 @@ const localStyles = StyleSheet.create({
   stakedContainer: { marginTop: 10, marginBottom: 10 },
   stakedTitle: { fontSize: 16, fontWeight: 'bold', color: '#aaa', marginBottom: 12 },
   stakedCard: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: '#333', borderRadius: 16, padding: 16, width: 170 },
-  // ★ SKR用の青枠ハイライトを再定義
+  // SKR用の青枠ハイライトを再定義
   skrHighlight: { borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' },
   stakedHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   stakedName: { color: '#fff', fontWeight: 'bold', fontSize: 14, flexShrink: 1 },

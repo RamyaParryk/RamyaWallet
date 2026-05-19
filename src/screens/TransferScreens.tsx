@@ -6,6 +6,7 @@ import { Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction } from '@solana/spl-token';
 
 import { Camera } from 'react-native-vision-camera'; 
+import { SeedVault } from '@solana-mobile/seed-vault-lib';
 
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
@@ -63,7 +64,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
   const assets = useAssetStore((s) => s.assets);
   const sendableAssets = assets.filter((a: any) => a.mint !== 'native-stake' && a.decimals > 0);
   
-  // ★ アセット(送るコイン)が選ばれていない場合は、絶対に 'asset' 画面からスタートしてクラッシュを防ぐ
   const initialStep = (preSelectedAsset && preSelectedAddress && preSelectedAmount) ? 'confirm' 
                     : (preSelectedAsset) ? 'recipient' 
                     : 'asset';
@@ -142,7 +142,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
     if (step === 'asset') return onBack();
     if (step === 'recipient') return (preSelectedAsset) ? onBack() : setStep('asset');
     if (step === 'amount') {
-      // ★ ダッシュボードからQRを読んで宛先入力がスキップされていた場合、戻るボタンでAssetに戻る
       if (preSelectedAddress && !preSelectedAsset) return setStep('asset');
       return setStep('recipient');
     }
@@ -155,7 +154,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
   };
 
   const goToConfirm = () => {
-    if (!selectedAsset) return; // ★ アセットがない場合は絶対に進めない
+    if (!selectedAsset) return; 
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       setAlert({ visible: true, title: t('error') || 'Error', message: 'Enter a valid amount', type: 'error' }); return;
     }
@@ -190,9 +189,36 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = fromPubkey;
 
-      const keypair = Keypair.fromSecretKey(wallet.secretKey);
-      const signature = await connection.sendTransaction(transaction, [keypair], { skipPreflight: false, preflightCommitment: 'confirmed' });
-      
+      let signature = '';
+
+      if (wallet.walletType === 'seed-vault') {
+        // ハードコードを廃止し、取得済みのパスを使用する
+        const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
+        // React Nativeブリッジのクラッシュを防ぐため確実にUint8Array化
+        const serializedTx = transaction.serialize({ requireAllSignatures: false, verifySignatures: false });
+        const txBytes = new Uint8Array(serializedTx);
+        
+        const signedPayloads = await SeedVault.signTransactions(
+          wallet.authToken, 
+          [derivationPath], 
+          [txBytes]
+        );
+        
+        const signedTxBytes = new Uint8Array(signedPayloads[0]);
+        signature = await connection.sendRawTransaction(signedTxBytes, { 
+          skipPreflight: false, 
+          preflightCommitment: 'confirmed' 
+        });
+
+      } else {
+        if (!wallet.secretKey) throw new Error("Secret key is missing");
+        const keypair = Keypair.fromSecretKey(wallet.secretKey);
+        signature = await connection.sendTransaction(transaction, [keypair], { 
+          skipPreflight: false, 
+          preflightCommitment: 'confirmed' 
+        });
+      }
+
       notify(t('sending') || 'Sending...');
       await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
       
@@ -226,7 +252,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
                 sendableAssets.map((a: any, i: number) => (
                   <TouchableOpacity key={i} style={[styles.tokenItem, { borderBottomWidth: 1, borderBottomColor: '#222', paddingVertical: 12 }]} onPress={() => { 
                     setSelectedAsset(a); 
-                    // ★ 神UX: 既にダッシュボードでQRを読んで宛先が埋まっているなら、宛先入力をスキップして直接金額へ！
                     if (address) {
                       setStep('amount');
                     } else {
@@ -287,15 +312,14 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
                <Text style={{ color: '#888', fontSize: 16, marginTop: 12 }}>{t('available') || 'Available'}: {selectedAsset?.amount} {selectedAsset?.symbol}</Text>
             </View>
 
-            {/* ★ 安全対策: selectedAsset が空の場合はボタンを出さない */}
             {selectedAsset && selectedAsset.decimals !== 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
                 <TouchableOpacity style={{ backgroundColor: '#1a1a1a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }} onPress={() => {
-                  const amt = selectedAsset.amount || 0; // undefined対策
+                  const amt = selectedAsset.amount || 0; 
                   setAmount(String(parseFloat((amt / 2).toFixed(9))));
                 }}><Text style={{ color: '#a855f7', fontWeight: 'bold' }}>{t('half') || 'Half'}</Text></TouchableOpacity>
                 <TouchableOpacity style={{ backgroundColor: '#1a1a1a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }} onPress={() => { 
-                  const amt = selectedAsset.amount || 0; // undefined対策
+                  const amt = selectedAsset.amount || 0; 
                   const maxAmt = selectedAsset.mint === SOL_MINT ? Math.max(0, amt - 0.002) : amt; 
                   setAmount(String(parseFloat(maxAmt.toFixed(9)))); 
                 }}><Text style={{ color: '#a855f7', fontWeight: 'bold' }}>{t('max') || 'Max'}</Text></TouchableOpacity>
