@@ -5,26 +5,25 @@ import { ExternalLink, AlertCircle, RefreshCw, ArrowUpRight, Zap, FileCode2 } fr
 import { Connection, PublicKey } from '@solana/web3.js';
 import { MAINNET_RPC_URL, HELIUS_API_KEY } from '../constants/config';
 
-// 🌟 t() を受け取って多言語化
 const getRelativeTime = (timestamp: number | null | undefined, t: any) => {
-  if (!timestamp) return t('unknown') || 'Unknown';
+  if (!timestamp) return t('unknown') || '不明';
   const now = Math.floor(Date.now() / 1000);
   const diff = Math.max(0, now - timestamp);
   
-  if (diff < 60) return `${diff}${t('time_sec_ago') || 's ago'}`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}${t('time_min_ago') || 'm ago'}`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}${t('time_hr_ago') || 'h ago'}`;
-  if (diff < 2592000) return `${Math.floor(diff / 86400)}${t('time_day_ago') || 'd ago'}`;
+  if (diff < 60) return `${diff}${t('time_sec_ago') || '秒前'}`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}${t('time_min_ago') || '分前'}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}${t('time_hr_ago') || '時間前'}`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}${t('time_day_ago') || '日前'}`;
   return new Date(timestamp * 1000).toLocaleDateString();
 };
 
 const formatDescription = (desc: string, type: string, myAddress: string, t: any) => {
   if (!desc || desc === 'UNKNOWN') {
-    if (type === 'SWAP') return t('tx_swap') || 'Token Swap';
-    if (type === 'TRANSFER') return t('tx_transfer') || 'Token Transfer';
-    return t('tx_contract') || 'Contract Interaction';
+    if (type === 'SWAP') return t('swap') || 'スワップ';
+    if (type === 'TRANSFER') return t('send') || '送金';
+    return t('tx_contract') || 'コントラクト実行';
   }
-  let formatted = desc.replace(new RegExp(myAddress, 'g'), t('tx_you') || 'You');
+  let formatted = desc.replace(new RegExp(myAddress, 'g'), t('tx_you') || 'あなた');
   formatted = formatted.replace(/[1-9A-HJ-NP-Za-km-z]{32,44}/g, (match) => {
     return `${match.slice(0, 4)}...${match.slice(-4)}`;
   });
@@ -74,7 +73,7 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
         relativeTime: getRelativeTime(sig.blockTime, t),
         error: sig.err,
         status: sig.err ? 'failed' : 'success',
-        description: t('tx_contract') || 'Contract Interaction',
+        description: t('tx_contract') || 'コントラクト実行',
         type: 'UNKNOWN'
       }));
       setHistory(data);
@@ -112,7 +111,8 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <Text style={[styles.screenTitle, { paddingTop: 10 }]}>{t('history') || 'Transaction History'}</Text>
+      <Text style={[styles.screenTitle, { paddingTop: 10, marginBottom: 4 }]}>{t('history') || '履歴'}</Text>
+      <Text style={localStyles.subTitle}>{t('history_desc') || '最新10件の取引を表示します'}</Text>
       
       {loading ? (
         <View style={localStyles.center}>
@@ -142,7 +142,7 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
 
                 <View style={localStyles.txInfo}>
                   <Text style={localStyles.txTitle} numberOfLines={3}>
-                    {isFailed ? (t('tx_failed') || 'Failed Transaction') : item.description}
+                    {isFailed ? (t('error') || 'エラー') : item.description}
                   </Text>
                   <Text style={localStyles.txHash}>
                     {item.signature.slice(0, 8)}...{item.signature.slice(-8)}
@@ -158,7 +158,7 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
           }}
           ListEmptyComponent={() => (
             <View style={localStyles.center}>
-              <Text style={{ color: '#666', fontSize: 14 }}>{t('no_transactions') || 'No transactions found.'}</Text>
+              <Text style={{ color: '#666', fontSize: 14 }}>{t('no_transactions') || '取引履歴はありません'}</Text>
             </View>
           )}
         />
@@ -169,6 +169,7 @@ export const HistoryScreen = ({ t, address, onBack }: any) => {
 
 const localStyles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 40 },
+  subTitle: { textAlign: 'center', color: '#888', fontSize: 13, marginBottom: 16 },
   txCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(26, 26, 26, 0.85)', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
   iconWrapper: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   txInfo: { flex: 1, paddingRight: 10, justifyContent: 'center' },

@@ -1,226 +1,167 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, StyleSheet, Platform } from 'react-native';
-import { Lock, Check, Github, Info, AlertCircle, Globe, Server, ArrowUpRight, ShieldCheck, ChevronRight, FileText, Youtube } from 'lucide-react-native';
-import ReactNativeBiometrics from 'react-native-biometrics';
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Image, Dimensions } from 'react-native';
+import { Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, Image as ImageIcon, QrCode, RefreshCw } from 'lucide-react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 
+import { useWalletConnectStore } from '../state/walletConnectStore';
 import { styles as globalStyles } from '../styles/globalStyles';
-import { HeaderRow } from '../components/HeaderRow';
-import { GITHUB_URL } from '../constants/config';
-import { secretKeyToString } from '../utils/solanaUtils';
-import packageJson from '../../package.json';
-import { ConfirmModal } from '../components/ActionModals';
+import { shortenAddress } from '../utils/solanaUtils';
+import { TokenIcon } from '../components/TokenIcon';
+import { QRScannerModal } from '../components/QRScannerModal';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+const { width } = Dimensions.get('window');
 
-const SettingItemRow = ({ icon: Icon, title, desc, onPress, rightElement, isLast, color="rgba(168, 85, 247, 0.1)", iconColor="#a855f7" }: any) => (
-  <TouchableOpacity style={[localStyles.settingItem, !isLast && localStyles.borderBottom]} onPress={onPress} disabled={!onPress}>
-    <View style={[localStyles.iconWrapper, { backgroundColor: color }]}>
-      <Icon size={20} color={iconColor} />
+const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) => (
+  <TouchableOpacity onPress={onPress} style={{ alignItems: 'center', gap: 5 }}>
+    <View style={[globalStyles.actionCircle, { backgroundColor: color }]}>
+      <Icon size={24} color="#fff" />
     </View>
-    <View style={localStyles.textContainer}>
-      <Text style={localStyles.itemTitle}>{title}</Text>
-      {desc && <Text style={localStyles.itemDesc}>{desc}</Text>}
-    </View>
-    {rightElement || (onPress && <ChevronRight size={20} color="#444" />)}
+    <Text style={globalStyles.label}>{label}</Text>
   </TouchableOpacity>
 );
 
-// --- 1. Security Settings ---
-export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack }: any) => {
-  const [showKey, setShowKey] = useState(false);
-  const [keyConfirm, setKeyConfirm] = useState(false);
-  const insets = useSafeAreaInsets();
+// 🌟 onRefresh を受け取る
+export const DashboardScreen = ({ t, onNavigate, wallet, assets, totalValue, onRefresh }: any) => {
+  const [isScanning, setIsScanning] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
+  
+  const tokens = assets.filter((a: any) => a.decimals > 0 && a.amount > 0);
+  const nfts = assets.filter((a: any) => a.decimals === 0 && a.amount > 0);
 
-  const handleReveal = async () => {
-    if (biometrics) {
-      const rnBiometrics = new ReactNativeBiometrics();
-      const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('use_biometrics') || 'Use Biometrics' });
-      if (success) setShowKey(true);
+  const handleCopy = () => {
+    if (wallet?.address) Clipboard.setString(wallet.address);
+  };
+
+  const handleScan = (data: string) => {
+    setIsScanning(false);
+    if (data.startsWith('wc:')) {
+      useWalletConnectStore.getState().pair(data).catch(() => {});
     } else {
-      setShowKey(true);
+      onNavigate('send', { preSelectedAddress: data });
     }
   };
 
   return (
     <View style={globalStyles.container}>
-      <HeaderRow title={t('security') || 'Security'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={globalStyles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        <Text style={globalStyles.sectionTitle}>{t('security') || 'Security'}</Text>
-        <View style={globalStyles.card}>
-          <SettingItemRow 
-            icon={Lock} title={t('pin_setup') || "PIN Setup"} desc={hasPin ? "ON" : "OFF"} 
-            rightElement={
-              <TouchableOpacity style={localStyles.actionBtn} onPress={onSetupPin}>
-                <Text style={localStyles.actionBtnText}>{hasPin ? (t('save') || 'Change') : (t('add_new') || 'Setup')}</Text>
-              </TouchableOpacity>
-            } 
-          />
-          <SettingItemRow 
-            icon={ShieldCheck} title={t('biometrics') || 'Biometrics'} desc={t('use_biometrics') || 'Use Biometrics'} isLast
-            rightElement={<Switch value={biometrics} onValueChange={setBiometrics} trackColor={{ true: '#a855f7', false: '#333' }} />} 
-          />
-        </View>
-
-        {wallet?.walletType !== 'seed-vault' && (
-          <>
-            <Text style={globalStyles.sectionTitle}>{t('recovery_phrase') || 'Recovery Phrase'}</Text>
-            <View style={globalStyles.card}>
-              <View style={localStyles.secretHeader}>
-                <Text style={localStyles.secretTitle}>{t('private_key') || 'Private Key'}</Text>
-                {!showKey ? (
-                  <TouchableOpacity style={localStyles.actionBtn} onPress={() => setKeyConfirm(true)}>
-                    <Text style={localStyles.actionBtnText}>{t('show') || 'Show'}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={localStyles.actionBtn} onPress={() => setShowKey(false)}>
-                    <Text style={localStyles.actionBtnText}>{t('hide') || 'Hide'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {showKey && <Text style={localStyles.secretData}>{secretKeyToString(wallet?.secretKey)}</Text>}
-            </View>
-            <View style={globalStyles.warningBox}>
-              <AlertCircle size={24} color="#ef4444" />
-              <Text style={globalStyles.warningText}>{t('warning_share') || 'Never share this with anyone.'}</Text>
-            </View>
-          </>
-        )}
-      </ScrollView>
-      <ConfirmModal visible={keyConfirm} title={t('danger_zone') || 'Danger Zone'} message={t('secret_phrase_desc') || 'Are you sure?'} confirmText={t('show') || 'Show'} cancelText={t('cancel') || 'Cancel'} onConfirm={() => { setKeyConfirm(false); handleReveal(); }} onCancel={() => setKeyConfirm(false)} />
-    </View>
-  );
-};
-
-// --- 2. Network Settings ---
-export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, onBack }: any) => {
-  return (
-    <View style={globalStyles.container}>
-      <HeaderRow title={t('network') || 'Network'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16 }}>
-        <Text style={globalStyles.sectionTitle}>{t('environment') || 'Environment'}</Text>
-        <View style={globalStyles.card}>
-          <SettingItemRow icon={Globe} title="Mainnet Beta" desc="Production Network" onPress={() => setNetwork('mainnet-beta')} rightElement={currentNetwork === 'mainnet-beta' && <Check color="#22c55e" />} />
-          <SettingItemRow icon={Server} title="Devnet" desc="Development Network" isLast onPress={() => setNetwork('devnet')} rightElement={currentNetwork === 'devnet' && <Check color="#22c55e" />} />
-        </View>
-      </ScrollView>
-    </View>
-  );
-};
-
-// --- 3. Help Screen ---
-export const HelpScreen = ({ t, onBack }: any) => {
-  const faqs = [
-    { q: t('faq_restore') || 'How to restore?', a: t('faq_restore_desc') },
-    { q: t('faq_stake') || 'What is Staking?', a: t('faq_stake_desc') },
-    { q: t('faq_apy') || 'What is the APY?', a: t('faq_apy_desc') },
-    { q: t('faq_fee') || 'Any fees?', a: t('faq_fee_desc') },
-    { q: t('faq_device') || 'Changing device?', a: t('faq_device_desc') },
-    { q: t('faq_bank') || 'Difference from bank?', a: t('faq_bank_desc') },
-  ];
-  return (
-    <View style={globalStyles.container}>
-      <HeaderRow title={t('help') || 'Help & FAQ'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        <Text style={globalStyles.sectionTitle}>FAQ</Text>
-        {faqs.map((faq, i) => (
-          <View key={i} style={globalStyles.helpItemContainer}>
-            <View style={globalStyles.helpHeaderRow}>
-              <View style={globalStyles.helpIconBadge}><Info size={16} color="#fff" /></View>
-              <Text style={globalStyles.helpTitle}>{faq.q}</Text>
-            </View>
-            <Text style={globalStyles.helpDesc}>{faq.a}</Text>
+        {/* ヘッダー＆ウォレット情報 */}
+        <View style={localStyles.header}>
+          <TouchableOpacity style={localStyles.walletPill} onPress={handleCopy}>
+            <View style={localStyles.avatar} />
+            <Text style={localStyles.walletAddress}>{shortenAddress(wallet?.address)}</Text>
+            <Copy size={14} color="#888" />
+          </TouchableOpacity>
+          
+          {/* 🌟 更新ボタンとQRスキャンボタンを横並びに配置 */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <TouchableOpacity onPress={onRefresh}>
+              <RefreshCw size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsScanning(true)}>
+              <QrCode size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
-        ))}
+        </View>
+
+        <View style={localStyles.balanceSection}>
+          <Text style={localStyles.totalValueLabel}>{t('total_assets') || 'Total Assets (USD)'}</Text>
+          <Text style={localStyles.totalValue}>$ {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+        </View>
+
+        {/* アクションボタン */}
+        <View style={localStyles.actionRow}>
+          <ActionButton icon={ArrowDownLeft} label={t('receive') || 'Receive'} color="#3b82f6" onPress={() => onNavigate('receive')} />
+          <ActionButton icon={Send} label={t('send') || 'Send'} color="#a855f7" onPress={() => onNavigate('send')} />
+          <ActionButton icon={CreditCard} label={t('buy') || 'Buy'} color="#22c55e" onPress={() => Linking.openURL('https://moonpay.com')} />
+          <ActionButton icon={TrendingUp} label={t('stake') || 'Stake'} color="#f59e0b" onPress={() => onNavigate('stake')} />
+        </View>
+
+        <View style={localStyles.tabContainer}>
+          <TouchableOpacity style={[localStyles.tabButton, activeTab === 'tokens' && localStyles.activeTab]} onPress={() => setActiveTab('tokens')}>
+            <Text style={[localStyles.tabText, activeTab === 'tokens' && localStyles.activeTabText]}>
+              {t('assets') || 'Assets'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[localStyles.tabButton, activeTab === 'nfts' && localStyles.activeTab]} onPress={() => setActiveTab('nfts')}>
+            <Text style={[localStyles.tabText, activeTab === 'nfts' && localStyles.activeTabText]}>
+              NFTs
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* トークンリスト */}
+        {activeTab === 'tokens' && (
+          <View style={globalStyles.card}>
+            {tokens.map((asset: any, index: number) => (
+              <TouchableOpacity 
+                key={index} 
+                style={[globalStyles.tokenItem, { borderWidth: 0, paddingHorizontal: 0, paddingVertical: 12, marginBottom: 0, borderBottomWidth: index === tokens.length - 1 ? 0 : 1 }]} 
+                onPress={() => onNavigate('asset-detail', { asset })}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <TokenIcon uri={asset.logoURI} symbol={asset.symbol} mint={asset.mint} size={40} />
+                  <View>
+                    <Text style={globalStyles.tokenSym}>{asset.name}</Text>
+                    <Text style={globalStyles.tokenName}>
+                      {asset.amount} {asset.symbol}
+                    </Text>
+                  </View>
+                </View>
+                <View>
+                  <Text style={globalStyles.tokenBal}>$ {(asset.value || 0).toFixed(2)}</Text>
+                  <Text style={globalStyles.tokenVal}>{asset.price ? `$${asset.price.toFixed(2)}` : ''}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* NFTグリッド */}
+        {activeTab === 'nfts' && (
+          <View style={localStyles.nftGrid}>
+            {nfts.map((nft: any, index: number) => (
+              <TouchableOpacity key={index} style={localStyles.nftCard} onPress={() => onNavigate('asset-detail', { asset: nft })}>
+                {nft.logoURI ? (
+                  <Image source={{ uri: nft.logoURI }} style={localStyles.nftImage} />
+                ) : (
+                  <View style={[localStyles.nftImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#222' }]}>
+                    <ImageIcon size={32} color="#555" />
+                  </View>
+                )}
+                <Text style={localStyles.nftName} numberOfLines={1}>{nft.name}</Text>
+              </TouchableOpacity>
+            ))}
+            {nfts.length === 0 && (
+              <Text style={{ color: '#666', textAlign: 'center', width: '100%', paddingVertical: 40 }}>
+                {t('no_assets') || 'No Assets'}
+              </Text>
+            )}
+          </View>
+        )}
+
       </ScrollView>
-    </View>
-  );
-};
-
-// --- 4. About Screen ---
-export const AboutScreen = ({ t, onBack }: any) => {
-  return (
-    <View style={globalStyles.container}>
-      <HeaderRow title={t('about') || 'About App'} onBack={onBack} />
-      
-      <View style={{ alignItems: 'center', marginTop: 30 }}>
-        <View style={localStyles.logoContainer}>
-          <Image source={require('../../assets/icon.png')} style={localStyles.appIcon} />
-        </View>
-        <Text style={localStyles.appName}>Ramya Wallet</Text>
-        <Text style={localStyles.appVersion}>Version {packageJson.version}</Text>
-      </View>
-
-      <View style={{ paddingHorizontal: 16, marginTop: 30 }}>
-        <Text style={globalStyles.sectionTitle}>{t('support') || "Support"}</Text>
-        <View style={globalStyles.card}>
-          <SettingItemRow icon={Github} title="GitHub" desc="Source code" onPress={() => Linking.openURL(GITHUB_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
-          <SettingItemRow icon={Youtube} title={t('official_youtube') || "Official YouTube"} desc="Ramya Wallet Channel" onPress={() => Linking.openURL('https://youtube.com/')} rightElement={<ArrowUpRight size={20} color="#888" />} />
-          <SettingItemRow icon={FileText} title={t('terms_title') || "Terms & Privacy Policy"} desc={t('terms_desc') || "Tap to view"} isLast onPress={() => Linking.openURL('https://ramyawallet.com/privacy')} rightElement={<ArrowUpRight size={20} color="#888" />} />
-        </View>
-
-        <Text style={{textAlign:'center', color:'#555', marginTop:40, fontSize: 12}}>
-          Made with ❤️ for the Solana Community
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-// --- 5. Language Screen ---
-export const LanguageScreen = ({ t, onBack, onChange, currentLang }: any) => { 
-  const langs = [
-    { code: 'ja', label: '日本語' },
-    { code: 'en', label: 'English' },
-    { code: 'es', label: 'Español' },
-    { code: 'pt', label: 'Português' },
-    { code: 'it', label: 'Italiano' },
-    { code: 'de', label: 'Deutsch' },
-    { code: 'fr', label: 'Français' },
-    { code: 'ru', label: 'Русский' },
-    { code: 'hi', label: 'हिन्दी' },
-    { code: 'vi', label: 'Tiếng Việt' },
-    { code: 'th', label: 'ไทย' },
-    { code: 'ar', label: 'العربية' },
-    { code: 'fa', label: 'فارسی' },
-    { code: 'tr', label: 'Türkçe' },
-    { code: 'sw', label: 'Kiswahili' },
-    { code: 'zh', label: '中文' },
-    { code: 'ko', label: '한국어' },
-  ];
-
-  return (
-    <View style={globalStyles.container}>
-      <HeaderRow title={t('language') || "Language"} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16, paddingBottom: 40 }}>
-        <View style={globalStyles.card}>
-          {langs.map((l, i) => (
-            <SettingItemRow 
-              key={l.code} icon={Globe} title={l.label} 
-              isLast={i === langs.length - 1} onPress={() => onChange(l.code)} 
-              rightElement={currentLang === l.code && <Check color="#22c55e" />} 
-            />
-          ))}
-        </View>
-      </ScrollView>
+      <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />
     </View>
   );
 };
 
 const localStyles = StyleSheet.create({
-  settingItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  borderBottom: { borderBottomWidth: 1, borderBottomColor: '#333' },
-  iconWrapper: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(168, 85, 247, 0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
-  textContainer: { flex: 1 },
-  itemTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  itemDesc: { color: '#888', fontSize: 13, marginTop: 2 },
-  actionBtn: { backgroundColor: '#2a2a2a', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  actionBtnText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold' },
-  secretHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  secretTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  secretData: { color: '#ef4444', fontFamily: 'monospace', fontSize: 14, lineHeight: 22, backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
-  logoContainer: { width: 100, height: 100, borderRadius: 24, backgroundColor: '#a855f7', justifyContent: 'center', alignItems: 'center', marginBottom: 16, shadowColor: '#a855f7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-  appIcon: { width: 75, height: 75, resizeMode: 'contain' },
-  appName: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  appVersion: { color: '#888', fontSize: 16, marginTop: 4 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16 },
+  walletPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#333', gap: 8 },
+  avatar: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#a855f7' },
+  walletAddress: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  balanceSection: { alignItems: 'center', paddingVertical: 30 },
+  totalValueLabel: { color: '#888', fontSize: 14, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
+  totalValue: { color: '#fff', fontSize: 48, fontWeight: 'bold' },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, marginBottom: 24 },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#111', borderRadius: 12, padding: 4, marginHorizontal: 16, marginBottom: 16 },
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  activeTab: { backgroundColor: '#2a2a2a' },
+  tabText: { color: '#888', fontWeight: 'bold', fontSize: 15 },
+  activeTabText: { color: '#fff' },
+  nftGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 16, gap: 12 },
+  nftCard: { width: (width - 44) / 2, backgroundColor: '#1a1a1a', borderRadius: 16, borderWidth: 1, borderColor: '#333', overflow: 'hidden', paddingBottom: 12 },
+  nftImage: { width: '100%', aspectRatio: 1 },
+  nftName: { color: '#fff', fontWeight: 'bold', fontSize: 14, marginTop: 12, paddingHorizontal: 12 },
 });

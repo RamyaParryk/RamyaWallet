@@ -3,8 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
 import { ArrowDown, Check } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Buffer } from 'buffer';
-
-import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
+import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { SOL_MINT, SUPPORTED_LSTS, JITO_SOL_MINT, MSOL_MINT, BSOL_MINT, LST_APY_APIS } from '../constants/config';
 import { signWithSeedVault, parseSolanaError } from '../utils/solanaUtils'; 
@@ -13,7 +12,6 @@ import { refreshAssetsService } from '../services/refreshAssets';
 import { jupiterQuoteApi } from '../services/jupiterService';
 import { TokenIcon } from '../components/TokenIcon';
 import { useAssetStore } from '../state/assetStore';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
@@ -148,7 +146,7 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
         txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false });
       }
       
-      notify(t('processing'));
+      notify(t('processing') || '処理中...');
       await connection.confirmTransaction(txid, 'confirmed');
 
       setShowSuccess(true);
@@ -157,7 +155,7 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
       refreshAssetsService({ force: true });
     } catch (e: any) {
       console.error("🔥 [STAKE FATAL ERROR]", e);
-      setAlert({ visible: true, title: t('error') || 'Error', message: parseSolanaError(e, t) });
+      setAlert({ visible: true, title: t('error') || 'エラー', message: parseSolanaError(e, t) });
     } finally { setLoading(false); }
   };
 
@@ -168,10 +166,10 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <HeaderRow title={t('staking_btn')} onBack={onBack} />
+      <HeaderRow title={t('staking_btn') || 'ステーキングする'} onBack={onBack} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
         
-        <Text style={globalStyles.sectionTitle}>{t('select_staking_asset') || 'Select Asset'}</Text>
+        <Text style={globalStyles.sectionTitle}>{t('select_staking_asset') || '運用する資産を選択'}</Text>
         
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={localStyles.lstSelector}>
           {SUPPORTED_LSTS.map((lst) => {
@@ -190,8 +188,8 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
         
         <View style={globalStyles.card}>
           <View style={globalStyles.cardHeader}>
-            <Text style={globalStyles.cardLabel}>{t('deposit')} (SOL)</Text>
-            <Text style={{ color: '#888', fontSize: 12 }}>{t('available')}: {safeBalance.toFixed(4)}</Text>
+            <Text style={globalStyles.cardLabel}>{t('deposit') || '預ける'} (SOL)</Text>
+            <Text style={{ color: '#888', fontSize: 12 }}>{t('available') || '利用可能'}: {safeBalance.toFixed(4)}</Text>
           </View>
           <TextInput style={globalStyles.amountInputLarge} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
           
@@ -214,19 +212,19 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
 
         <View style={[globalStyles.card, { paddingTop: 24 }]}>
           <View style={globalStyles.cardHeader}>
-            <Text style={globalStyles.cardLabel}>{t('receive_lbl')} ({activeSymbol})</Text>
+            <Text style={globalStyles.cardLabel}>{t('receive_lbl') || '受取る'} ({activeSymbol})</Text>
             <Text style={localStyles.apyText}>{displayApy} APY</Text>
           </View>
           {loading ? <ActivityIndicator color="#a855f7" style={{alignSelf: 'flex-end', marginVertical: 10}} /> : <Text style={globalStyles.amountInputLarge}>{estimatedOut}</Text>}
         </View>
 
         <TouchableOpacity style={[globalStyles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 30 }]} disabled={!quote || loading} onPress={() => quote && setShowConfirm(true)}>
-          <Text style={globalStyles.primaryButtonText}>{t('staking_btn')}</Text>
+          <Text style={globalStyles.primaryButtonText}>{t('staking_btn') || 'ステーキングする'}</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      <ConfirmModal visible={showConfirm} title={t('confirm_stake_title')} message={`${amount} SOL -> ${estimatedOut} ${activeSymbol}`} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doStake(); }} />
-      <SuccessModal visible={showSuccess} message={t('stake_success_msg')} onDone={() => setShowSuccess(false)} />
+      <ConfirmModal visible={showConfirm} title={t('confirm_stake_title') || 'ステーキングの確認'} message={`${amount} SOL -> ${estimatedOut} ${activeSymbol}`} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doStake(); }} />
+      <SuccessModal visible={showSuccess} message={t('stake_success_msg') || 'ステーキング完了！'} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
       
       {showBanner && <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}

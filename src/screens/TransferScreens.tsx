@@ -5,9 +5,8 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { Keypair, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction } from '@solana/spl-token';
 import { Camera } from 'react-native-vision-camera';
-
 import { signWithSeedVault, shortenAddress } from '../utils/solanaUtils'; 
-import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルをインポート
+import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { SimpleAlertModal, SuccessModal } from '../components/ActionModals';
 import { refreshAssetsService } from '../services/refreshAssets';
@@ -23,7 +22,6 @@ const SOLANA_PAY_SCHEME = 'solana:';
 const safeNotify = (notify: any, message: string) => { try { notify?.(message); } catch {} };
 const sanitizeAmount = (value: string) => value.replace(',', '.').trim();
 
-// ...(extractSolanaUri等のNFCヘルパー関数群はそのまま)...
 const extractSolanaUri = (text: string | null | undefined): string | null => {
   if (!text) return null;
   const match = text.match(/solana:[A-Za-z0-9?=&._:%\-]+/);
@@ -125,7 +123,7 @@ export const ReceiveScreen = ({ t, wallet, onBack, notify }: any) => {
                 </Text>
               </View>
               <View style={[globalStyles.card, { paddingVertical: 12 }]}> 
-                <Text style={[globalStyles.cardLabel, { textAlign: 'left', marginBottom: 6 }]}>{t('amount') || '金額'} (SOL)</Text>
+                <Text style={[globalStyles.cardLabel, { textAlign: 'left', marginBottom: 6 }]}>{t('amount_sol') || '金額 (SOL)'}</Text>
                 <TextInput style={[globalStyles.amountInputLarge, { marginBottom: 0 }]} placeholder="0.00" placeholderTextColor="#444" keyboardType="numeric" value={amount} onChangeText={setAmount} />
               </View>
               <Text style={{ color: '#666', fontSize: 13, marginTop: 12, textAlign: 'center' }}>{t('nfc_scan_holding') || '相手のスマホにかざしてください...'}</Text>
@@ -157,7 +155,6 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
   const [showSuccess, setShowSuccess] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
-  // ...(QR/NFCスキャンやNdefの読み取り処理は変更なし)...
   const handleUniversalScan = (scannedValue: string) => {
     const value = scannedValue.trim();
     setIsScanning(false);
@@ -239,14 +236,14 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
   const goToConfirm = () => {
     if (!selectedAsset) return;
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) { setAlert({ visible: true, title: t('error') || 'エラー', message: t('invalid_amount') || '有効な金額を入力してください', type: 'error' }); return; }
-    if (Number(amount) > selectedAsset.amount) { setAlert({ visible: true, title: t('error') || 'エラー', message: t('insufficient_balance') || '残高が不足しています', type: 'error' }); return; }
+    if (Number(amount) > selectedAsset.amount) { setAlert({ visible: true, title: t('error') || 'エラー', message: t('err_insufficient_funds') || '残高が不足しています', type: 'error' }); return; }
     setStep('confirm');
   };
 
   const executeSend = async () => {
     Keyboard.dismiss(); setLoading(true);
     try {
-      if (!wallet?.address || !selectedAsset) throw new Error('準備が完了していません');
+      if (!wallet?.address || !selectedAsset) throw new Error(t('unknown_error') || '準備が完了していません');
       const fromPubkey = new PublicKey(wallet.address);
       const destPubkey = new PublicKey(address);
       const sendAmount = parseFloat(amount);
@@ -275,7 +272,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
         const signedTxBytes = await signWithSeedVault(vTx.serialize(), wallet);
         signature = await connection.sendRawTransaction(signedTxBytes, { skipPreflight: false, preflightCommitment: 'confirmed' });
       } else {
-        if (!wallet.secretKey) throw new Error('シークレットキーがありません');
+        if (!wallet.secretKey) throw new Error(t('unknown_error') || 'シークレットキーがありません');
         const keypair = Keypair.fromSecretKey(wallet.secretKey);
         signature = await connection.sendTransaction(transaction, [keypair], { skipPreflight: false, preflightCommitment: 'confirmed' });
       }
@@ -361,7 +358,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
                 </View>
               )}
               <View style={{ flex: 1 }} />
-              <TouchableOpacity style={[globalStyles.primaryButton, (!amount || Number(amount) <= 0) && { backgroundColor: '#333' }]} disabled={!amount || Number(amount) <= 0} onPress={goToConfirm}><Text style={globalStyles.primaryButtonText}>{t('review') || '確認'}</Text></TouchableOpacity>
+              <TouchableOpacity style={[globalStyles.primaryButton, (!amount || Number(amount) <= 0) && { backgroundColor: '#333' }]} disabled={!amount || Number(amount) <= 0} onPress={goToConfirm}><Text style={globalStyles.primaryButtonText}>{t('review') || '確認する'}</Text></TouchableOpacity>
             </View>
           )}
 
@@ -391,7 +388,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
 
       <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleUniversalScan} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, visible: false })} />
-      <SuccessModal visible={showSuccess} message={t('send_success') || '送信成功！'} onDone={() => { setShowSuccess(false); onBack(); }} />
+      <SuccessModal visible={showSuccess} message={t('send_success') || '送信完了'} onDone={() => { setShowSuccess(false); onBack(); }} />
     </View>
   );
 };

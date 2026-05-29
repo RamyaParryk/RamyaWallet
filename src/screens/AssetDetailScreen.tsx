@@ -7,7 +7,7 @@ import { PublicKey, Transaction, Keypair, ComputeBudgetProgram, TransactionMessa
 import { createBurnInstruction, createCloseAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { createBurnNftInstruction } from '@metaplex-foundation/mpl-token-metadata';
 
-import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
+import { styles as globalStyles } from '../styles/globalStyles';
 import { useWalletStore } from '../state/walletStore';
 import { useConnectionStore } from '../state/connectionStore';
 import { ConfirmModal, SimpleAlertModal, SuccessModal } from '../components/ActionModals';
@@ -148,7 +148,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       if (errorMessage === "CNFT_UNSUPPORTED") {
         errorMessage = t('cnft_burn_error') || "This asset uses a special standard (e.g., spam) and cannot be burned.";
       } else if (errorMessage.includes("timed out")) {
-        errorMessage = "Network is busy. Timeout occurred.";
+        errorMessage = t('err_timeout') || "Network is busy. Timeout occurred.";
       } else if (errorMessage.includes("429")) {
         errorMessage = "RPC rate limit exceeded. Try again later.";
       }
@@ -196,7 +196,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
                 $ { (asset.price || 0).toLocaleString(undefined, { maximumFractionDigits: (asset.price || 0) < 0.01 ? 6 : 2 }) }
               </Text>
               <Text style={localStyles.balanceFiat}>
-                Value: $ { assetValue.toLocaleString(undefined, { maximumFractionDigits: 2 }) }
+                $ { assetValue.toLocaleString(undefined, { maximumFractionDigits: 2 }) }
               </Text>
             </View>
           </View>
@@ -243,7 +243,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
 
         {(description || descLoading) && (
           <View style={localStyles.aboutContainer}>
-            <Text style={localStyles.aboutTitle}>About {asset.name}</Text>
+            <Text style={localStyles.aboutTitle}>{t('description') || 'Description'}</Text>
             {descLoading ? (
               <ActivityIndicator size="small" color="#555" style={{ alignSelf: 'flex-start', marginTop: 10 }} />
             ) : (

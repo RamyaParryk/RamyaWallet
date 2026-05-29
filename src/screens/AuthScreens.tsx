@@ -19,7 +19,7 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
 
   const checkBiometrics = async () => {
     try {
-      const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('welcome_back') });
+      const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('welcome_back') || 'Welcome Back' });
       if (success) onUnlock();
     } catch(e) {}
   };
@@ -32,7 +32,7 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
         if (newPin === correctPin) {
           setTimeout(onUnlock, 100);
         } else {
-          setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
+          setAlert({ visible: true, title: t('error') || 'Error', message: t('pin_mismatch') || 'PIN mismatch' });
         }
       }
     }
@@ -40,8 +40,8 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
 
   return (
     <View style={[styles.pinContainer, { backgroundColor: 'transparent' }]}>
-      <Text style={styles.pinTitle}>{t('welcome_back')}</Text>
-      <Text style={styles.pinDesc}>{t('enter_pin')}</Text>
+      <Text style={styles.pinTitle}>{t('welcome_back') || 'Welcome Back'}</Text>
+      <Text style={styles.pinDesc}>{t('enter_pin') || 'Enter PIN'}</Text>
       <View style={styles.pinDots}>
         {[...Array(4)].map((_, i) => (
           <View key={i} style={[styles.dot, i < pin.length && styles.dotActive]} />
@@ -63,11 +63,11 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
       </View>
       {biometricsEnabled && (
          <TouchableOpacity style={{marginTop: 30}} onPress={checkBiometrics}>
-           <Text style={{color: '#a855f7', fontWeight:'bold'}}>{t('use_biometrics')}</Text>
+           <Text style={{color: '#a855f7', fontWeight:'bold'}}>{t('use_biometrics') || 'Use Biometrics'}</Text>
          </TouchableOpacity>
       )}
       <TouchableOpacity style={{marginTop: 30}} onPress={onLogout}>
-        <Text style={{color: '#666'}}>{t('logout_reset')}</Text>
+        <Text style={{color: '#666'}}>{t('logout_reset') || 'Logout / Reset'}</Text>
       </TouchableOpacity>
 
       <SimpleAlertModal 
@@ -106,7 +106,7 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
       if (inputPin === firstPin) {
         onSuccess(inputPin);
       } else {
-        setAlert({ visible: true, title: t('error'), message: t('pin_mismatch') });
+        setAlert({ visible: true, title: t('error') || 'Error', message: t('pin_mismatch') || 'PIN mismatch' });
       }
     }
   };
@@ -116,7 +116,7 @@ export const PinSetupScreen = ({ t, onSuccess, onCancel }: any) => {
       <TouchableOpacity style={styles.closeButton} onPress={onCancel}>
         <X size={24} color="#fff" />
       </TouchableOpacity>
-      <Text style={styles.pinTitle}>{step === 'create' ? t('pin_setup') : "OK"}</Text>
+      <Text style={styles.pinTitle}>{step === 'create' ? (t('pin_setup') || 'PIN Setup') : "OK"}</Text>
       <View style={styles.pinDots}>
         {[...Array(4)].map((_, i) => (
           <View key={i} style={[styles.dot, i < pin.length && styles.dotActive]} />

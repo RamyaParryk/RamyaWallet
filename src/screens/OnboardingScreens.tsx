@@ -6,7 +6,6 @@ import {
 import { Zap, Download, ShieldCheck } from 'lucide-react-native';
 import { validateMnemonic } from 'bip39';
 import { SeedVault } from '@solana-mobile/seed-vault-lib';
-
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { wait } from '../utils/solanaUtils';
@@ -42,23 +41,23 @@ export const WelcomeScreen = ({ t, onStart, onImport, onStartSeedVault }: any) =
   return (
     <View style={[styles.centerContent, { backgroundColor: '#000' }]}>
       <View style={styles.logoBox}><Zap size={40} color="white" fill="white" /></View>
-      <Text style={styles.title}>{t('welcome_title')}</Text>
-      <Text style={styles.subtitle}>{t('welcome_subtitle')}</Text>
+      <Text style={styles.title}>{t('welcome_title') || 'Ramya Wallet'}</Text>
+      <Text style={styles.subtitle}>{t('welcome_subtitle') || 'Safe, Fast, Simple.'}</Text>
       
       {hasSeedVault && (
         <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#22c55e', marginBottom: 16 }]} onPress={onStartSeedVault}>
           <ShieldCheck size={20} color="#fff" style={{marginRight: 8}} />
-          <Text style={styles.primaryButtonText}>{t('connect_seed_vault')}</Text>
+          <Text style={styles.primaryButtonText}>{t('connect_seed_vault') || 'Connect Seed Vault'}</Text>
         </TouchableOpacity>
       )}
 
       <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
-        <Text style={styles.primaryButtonText}>{t('create_new')}</Text>
+        <Text style={styles.primaryButtonText}>{t('create_new') || 'Create New Wallet'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.secondaryButton} onPress={onImport}>
         <Download size={20} color="#a855f7" style={{marginRight:8}} />
-        <Text style={styles.secondaryButtonText}>{t('import_wallet')}</Text>
+        <Text style={styles.secondaryButtonText}>{t('import_wallet') || 'Import Existing Wallet'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -78,7 +77,7 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
 
     if (!cleanMnemonic) return;
     if (!validateMnemonic(cleanMnemonic)) {
-      setAlert({ visible: true, title: t('error'), message: t('invalid_phrase') });
+      setAlert({ visible: true, title: t('error') || 'Error', message: t('invalid_phrase') || 'Invalid recovery phrase' });
       return;
     }
     setLoading(true);
@@ -89,11 +88,11 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <HeaderRow title={t('import_wallet')} onBack={onBack} />
+      <HeaderRow title={t('import_wallet') || 'Import Wallet'} onBack={onBack} />
       
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 }}>
-          <Text style={styles.descText}>{t('import_phrase_desc')}</Text>
+          <Text style={styles.descText}>{t('import_phrase_desc') || 'Enter your 12 or 24-word recovery phrase.'}</Text>
           
           <TextInput 
             style={styles.mnemonicInput}
@@ -107,11 +106,10 @@ export const ImportWalletScreen = ({ t, onBack, onImport }: any) => {
             style={[styles.primaryButton, (!mnemonic || loading) && {backgroundColor:'#333'}]} 
             onPress={handleImport} disabled={!mnemonic || loading}
           >
-            {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.primaryButtonText}>{t('import_wallet')}</Text>}
+            {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.primaryButtonText}>{t('import_wallet') || 'Import Wallet'}</Text>}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-
       <SimpleAlertModal 
         visible={alert.visible}
         title={alert.title}
@@ -128,7 +126,7 @@ export const LoadingScreen = ({ t, onFinish }: any) => {
   return (
     <View style={[styles.centerContent, { backgroundColor: '#000' }]}>
       <ActivityIndicator size="large" color="#a855f7" />
-      <Text style={styles.subtitle}>{t('loading_mnemonic')}</Text>
+      <Text style={styles.subtitle}>{t('loading_mnemonic') || 'Generating recovery phrase...'}</Text>
     </View>
   );
 };
@@ -138,10 +136,8 @@ export const CreateWalletScreen = ({ t, wallet, onConfirm }: any) => {
   const words = wallet?.mnemonic ? wallet.mnemonic.split(' ') : [];
   return (
     <View style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 }}>
-      <Text style={[styles.screenTitle, { marginTop: 20 }]}>{t('secret_phrase_title')}</Text>
-      
-      <Text style={styles.descText}>{t('secret_phrase_desc')}</Text>
-      
+      <Text style={[styles.screenTitle, { marginTop: 20 }]}>{t('secret_phrase_title') || 'Secret Recovery Phrase'}</Text>
+      <Text style={styles.descText}>{t('secret_phrase_desc') || 'These 12 words are the ONLY way to recover your wallet.'}</Text>
       <View style={styles.mnemonicContainer}>
         {words.map((word: string, i: number) => (
           <View key={i} style={styles.wordTag}>
@@ -152,10 +148,10 @@ export const CreateWalletScreen = ({ t, wallet, onConfirm }: any) => {
       </View>
       <View style={styles.warningBox}>
         <ShieldCheck size={20} color="#eab308" />
-        <Text style={styles.warningText}>{t('warning_share')}</Text>
+        <Text style={styles.warningText}>{t('warning_share') || 'Never share this with anyone.'}</Text>
       </View>
       <TouchableOpacity style={[styles.primaryButton, {marginTop: 'auto'}]} onPress={onConfirm}>
-        <Text style={styles.primaryButtonText}>{t('saved_btn')}</Text>
+        <Text style={styles.primaryButtonText}>{t('saved_btn') || 'I saved it'}</Text>
       </TouchableOpacity>
     </View>
   );

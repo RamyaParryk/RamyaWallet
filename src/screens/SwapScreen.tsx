@@ -12,7 +12,7 @@ import { TokenIcon } from '../components/TokenIcon';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 import { refreshAssetsService } from '../services/refreshAssets';
 import { jupiterQuoteApi } from '../services/jupiterService'; 
-import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
+import { styles as globalStyles } from '../styles/globalStyles';
 
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
@@ -173,11 +173,11 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         txid = await connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false });
       }
 
-      notify(t('processing'));
+      notify(t('processing') || 'Processing...');
       const confirmation = await connection.confirmTransaction(txid, 'confirmed');
       if (confirmation.value.err) throw new Error('Tx Failed');
 
-      notify(t('swap_success_msg'));
+      notify(t('swap_success_msg') || 'Swap successful!');
       setShowSuccess(true);
       setAmount('');
       setQuote(null);
@@ -205,13 +205,13 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
 
   return (
     <View style={localStyles.container}>
-      <Text style={globalStyles.screenTitle}>{t('swap')}</Text>
+      <Text style={globalStyles.screenTitle}>{t('swap') || 'Swap'}</Text>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
         
         <View style={globalStyles.card}>
           <View style={globalStyles.cardHeader}>
-            <Text style={globalStyles.cardLabel}>{t('pay')}</Text>
-            <Text style={{ color: '#aaa', fontSize: 12 }}>{t('available')}: {Number(currentBalance).toLocaleString()}</Text>
+            <Text style={globalStyles.cardLabel}>{t('pay') || 'Pay'}</Text>
+            <Text style={{ color: '#aaa', fontSize: 12 }}>{t('available') || 'Available'}: {Number(currentBalance).toLocaleString()}</Text>
           </View>
           <View style={localStyles.inputRow}>
             <TextInput style={[globalStyles.amountInputLarge, { fontSize: amount.length > 10 ? 24 : 32 }]} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
@@ -238,7 +238,7 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         <View style={localStyles.switchContainer}><TouchableOpacity style={localStyles.switchBtn} onPress={handleSwitch}><ArrowDown size={24} color="#a855f7" /></TouchableOpacity></View>
         
         <View style={[globalStyles.card, { paddingTop: 24 }]}>
-          <View style={globalStyles.cardHeader}><Text style={globalStyles.cardLabel}>{t('receive_lbl')}</Text></View>
+          <View style={globalStyles.cardHeader}><Text style={globalStyles.cardLabel}>{t('receive_lbl') || 'Receive'}</Text></View>
           <View style={localStyles.inputRow}>
             {loading ? <ActivityIndicator color="#a855f7" style={{ marginLeft: 'auto', marginRight: 10 }} /> : <Text style={[globalStyles.amountInputLarge, { color: quote ? '#fff' : '#666', fontSize: displayOutAmount.length > 10 ? 24 : 32 }]}>{displayOutAmount}</Text>}
             <TouchableOpacity style={localStyles.tokenSelectBtn} onPress={() => { setModalSide('to'); setModalVisible(true); }}>
@@ -250,18 +250,18 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         </View>
 
         <View style={localStyles.infoBox}>
-          <View style={localStyles.infoRow}><Text style={localStyles.infoLabel}>{t('fee')}</Text><Text style={[localStyles.infoValue, { color: '#4ade80' }]}>0% {t('included')} ✨</Text></View>
+          <View style={localStyles.infoRow}><Text style={localStyles.infoLabel}>{t('fee') || 'Fee'}</Text><Text style={[localStyles.infoValue, { color: '#4ade80' }]}>0% {t('included') || 'Included'} ✨</Text></View>
         </View>
         
         <TouchableOpacity style={[globalStyles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 24 }]} disabled={!quote || loading} onPress={handleSwapPress}>
-          <Text style={globalStyles.primaryButtonText}>{loading ? t('processing') : t('swap_btn')}</Text>
+          <Text style={globalStyles.primaryButtonText}>{loading ? (t('processing') || 'Processing...') : (t('swap_btn') || 'Swap')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <View style={globalStyles.modalOverlay}>
           <View style={[globalStyles.modalContent, { flex: 1, padding: 0 }]}>
-            <View style={localStyles.modalHeader}><Text style={globalStyles.modalTitle}>{t('select')}</Text><TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}><X size={24} color="#fff" /></TouchableOpacity></View>
+            <View style={localStyles.modalHeader}><Text style={globalStyles.modalTitle}>{t('select') || 'Select'}</Text><TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}><X size={24} color="#fff" /></TouchableOpacity></View>
             <View style={localStyles.searchBar}><Search size={20} color="#888" style={{ marginRight: 8 }} /><TextInput style={localStyles.searchInput} placeholder={t('search_tokens') || "Search tokens..."} placeholderTextColor="#888" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" /></View>
             <FlatList data={filteredTokens} keyExtractor={(item: any) => item.address || item.symbol} renderItem={({ item }: any) => {
                 const bal = item.symbol === 'SOL' ? solBalance : (tokenBalances || {})[item.address] || 0;
@@ -282,8 +282,8 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         </View>
       </Modal>
 
-      <ConfirmModal visible={showConfirm} title={t('confirm_swap_title')} message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`} cancelText={t('cancel')} confirmText={t('swap_btn')} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doSwap(); }} />
-      <SuccessModal visible={showSuccess} message={t('swap_success_msg')} onDone={() => setShowSuccess(false)} />
+      <ConfirmModal visible={showConfirm} title={t('confirm_swap_title') || 'Confirm Swap'} message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`} cancelText={t('cancel') || 'Cancel'} confirmText={t('swap_btn') || 'Swap'} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doSwap(); }} />
+      <SuccessModal visible={showSuccess} message={t('swap_success_msg') || 'Swap successful!'} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
       
       {showBanner && <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
