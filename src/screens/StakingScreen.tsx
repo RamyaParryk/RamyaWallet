@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { ArrowDown, Check } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 
-import { styles } from '../styles/globalStyles';
+import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
 import { HeaderRow } from '../components/HeaderRow';
-// LST_APY_APIS をインポートに追加
 import { SOL_MINT, SUPPORTED_LSTS, JITO_SOL_MINT, MSOL_MINT, BSOL_MINT, LST_APY_APIS } from '../constants/config';
 import { signWithSeedVault, parseSolanaError } from '../utils/solanaUtils'; 
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
@@ -21,16 +20,11 @@ import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
 
 const BANNER_ESTIMATED_HEIGHT = 60;
 
-// ネットワークの一時ブロックや遅延対策のためのタイムアウト付きフェッチ関数
 const fetchWithTimeout = async (url: string, ms = 5000) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
-
   try {
-    return await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
+    return await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
   } finally {
     clearTimeout(timer);
   }
@@ -38,7 +32,7 @@ const fetchWithTimeout = async (url: string, ms = 5000) => {
 
 export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalance, onRetryFetch }: any) => {
   const insets = useSafeAreaInsets();
-  const adUnitId = useMemo(() => (Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : ''), []);
+  const adUnitId = Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : '';
   const showBanner = adUnitId.length > 0;
   const tokenMap = useAssetStore(state => state.tokenMap);
 
@@ -51,37 +45,24 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
 
   const [dynamicApys, setDynamicApys] = useState<Record<string, string>>({});
-
   const safeBalance = Number(solBalance) || 0;
 
-  // ==========================================
-  // ★ タイムアウト機能付き＆完全サイレントパース処理
-  // ==========================================
   useEffect(() => {
     const fetchApys = async () => {
       const newApys: Record<string, string> = {};
 
-      // ① Jito公式API
       try {
         const res = await fetchWithTimeout(LST_APY_APIS.JITO);
         if (res.ok) {
           const data = await res.json();
-          let apyValue = 0;
-          if (Array.isArray(data) && data.length > 0) {
-            apyValue = data[0].apy || data[0].apr || 0;
-          } else if (data && typeof data === 'object') {
-            apyValue = data.apy || data.apr || data.apr?.['1m'] || 0;
-          }
+          let apyValue = Array.isArray(data) && data.length > 0 ? (data[0].apy || data[0].apr || 0) : (data.apy || data.apr || data.apr?.['1m'] || 0);
           if (apyValue > 0) {
             if (apyValue < 1) apyValue = apyValue * 100;
             newApys[JITO_SOL_MINT] = apyValue.toFixed(2) + '%';
           }
         }
-      } catch (e: any){
-        console.log('[APY] 🤫 Jito fetch failed, using fallback:', e?.message || 'timeout');
-      }
+      } catch (e: any){ console.log('[APY] 🤫 Jito fetch failed'); }
 
-      // ② Marinade公式API (生テキストで返ってくる仕様への対応)
       try {
         const res = await fetchWithTimeout(LST_APY_APIS.MARINADE);
         if (res.ok) {
@@ -92,42 +73,26 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
             newApys[MSOL_MINT] = apyValue.toFixed(2) + '%';
           }
         }
-      } catch (e: any){
-        console.log('[APY] 🤫 Marinade fetch failed, using fallback:', e?.message || 'timeout');
-      }
+      } catch (e: any){ console.log('[APY] 🤫 Marinade fetch failed'); }
 
-      // ③ SolBlaze公式API
       try {
         const res = await fetchWithTimeout(LST_APY_APIS.SOLBLAZE);
         if (res.ok) {
           const text = await res.text();
           let apyValue = 0;
-          try {
-            const data = JSON.parse(text);
-            apyValue = data.apy || data.apr || 0;
-          } catch {
-            apyValue = parseFloat(text.trim());
-          }
+          try { const data = JSON.parse(text); apyValue = data.apy || data.apr || 0; } catch { apyValue = parseFloat(text.trim()); }
           if (!isNaN(apyValue) && apyValue > 0) {
             if (apyValue < 1) apyValue = apyValue * 100;
             newApys[BSOL_MINT] = apyValue.toFixed(2) + '%';
           }
         }
-      } catch (e: any){
-        console.log('[APY] 🤫 SolBlaze fetch failed, using fallback:', e?.message || 'timeout');
-      }
+      } catch (e: any){ console.log('[APY] 🤫 SolBlaze fetch failed'); }
 
-      if (Object.keys(newApys).length > 0) {
-        setDynamicApys(prev => ({ ...prev, ...newApys }));
-      }
+      if (Object.keys(newApys).length > 0) setDynamicApys(prev => ({ ...prev, ...newApys }));
     };
-
     fetchApys();
   }, []);
 
-  // ==========================================
-  // ★ ルート取得 (Jupiter)
-  // ==========================================
   useEffect(() => {
     if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) return setQuote(null);
     const fetchQuote = async () => {
@@ -141,28 +106,20 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
     return () => clearTimeout(timer);
   }, [amount, selectedLST]);
 
-  // ==========================================
-  // ★ ステーキング実行
-  // ==========================================
   const doStake = async () => {
     if (!wallet || !quote || !connection) return;
     setLoading(true);
     try {
-      // 最強の商用ウォレット最適化パラメータ（v6）
-        const requestParams: any = {
+      const requestParams: any = {
         quoteResponse: quote,
         userPublicKey: wallet.address,
         wrapAndUnwrapSol: true,
         dynamicComputeUnitLimit: true as any,
-        
-        // SDKのバグを回避するため、文字列 "auto" ではなくオブジェクト形式にする
         prioritizationFeeLamports: {
           priorityLevelWithMaxLamports: { priorityLevel: "high", maxLamports: 5000000 }
         },
-        
-        dynamicSlippage: true,          // スリッページエラー防止
-        useSharedAccounts: true,        // 中間ATA作成費用の回避（超重要）
-        skipUserAccountsRpcCalls: true, // 速度向上
+        useSharedAccounts: true,
+        skipUserAccountsRpcCalls: true,
       };
 
       let result;
@@ -207,14 +164,15 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
   const estimatedOut = quote ? (Number(quote.outAmount) / 10**9).toFixed(4) : "0.00";
   const activeTokenInfo = tokenMap.get(selectedLST.mint);
   const activeSymbol = activeTokenInfo?.symbol || selectedLST.fallbackSymbol;
-  
   const displayApy = dynamicApys[selectedLST.mint] || selectedLST.fallbackApy;
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <HeaderRow title={t('staking_btn')} onBack={onBack} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
-        <Text style={localStyles.sectionLabel}>{t('select_staking_asset') || 'Select Asset'}</Text>
+        
+        <Text style={globalStyles.sectionTitle}>{t('select_staking_asset') || 'Select Asset'}</Text>
+        
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={localStyles.lstSelector}>
           {SUPPORTED_LSTS.map((lst) => {
             const tokenInfo = tokenMap.get(lst.mint);
@@ -229,54 +187,58 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
             );
           })}
         </ScrollView>
-        <View style={localStyles.card}>
-          <View style={localStyles.cardHeader}><Text style={localStyles.label}>{t('deposit')} (SOL)</Text><Text style={localStyles.balanceText}>{t('available')}: {safeBalance.toFixed(4)}</Text></View>
-          <TextInput style={localStyles.amountInput} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
+        
+        <View style={globalStyles.card}>
+          <View style={globalStyles.cardHeader}>
+            <Text style={globalStyles.cardLabel}>{t('deposit')} (SOL)</Text>
+            <Text style={{ color: '#888', fontSize: 12 }}>{t('available')}: {safeBalance.toFixed(4)}</Text>
+          </View>
+          <TextInput style={globalStyles.amountInputLarge} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
           
-          <View style={localStyles.percentRow}>
+          <View style={globalStyles.percentRow}>
             {[10, 50, 100].map((p) => (
               <TouchableOpacity key={p} onPress={() => {
                   let final = safeBalance * (p / 100);
-                  if (p === 100) final = Math.max(0, final - 0.01);
+                  if (p === 100) final = Math.max(0, final - 0.005);
                   setAmount(final.toFixed(6).replace(/\.?0+$/, ''));
-                }} style={localStyles.percentBtn}>
-                <Text style={localStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text>
+                }} style={globalStyles.percentBtn}>
+                <Text style={globalStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
-        <View style={{ alignItems: 'center', marginVertical: -10, zIndex: 10 }}><View style={localStyles.arrowCircle}><ArrowDown size={20} color="#666" /></View></View>
-        <View style={[localStyles.card, { paddingTop: 24 }]}>
-          <View style={localStyles.cardHeader}><Text style={localStyles.label}>{t('receive_lbl')} ({activeSymbol})</Text><Text style={localStyles.apyText}>{displayApy} APY</Text></View>
-          {loading ? <ActivityIndicator color="#a855f7" style={{alignSelf: 'flex-end', marginVertical: 10}} /> : <Text style={localStyles.amountInput}>{estimatedOut}</Text>}
+
+        <View style={{ alignItems: 'center', marginVertical: -10, zIndex: 10 }}>
+          <View style={localStyles.arrowCircle}><ArrowDown size={20} color="#666" /></View>
         </View>
-        <TouchableOpacity style={[styles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 30 }]} disabled={!quote || loading} onPress={() => quote && setShowConfirm(true)}>
-          <Text style={styles.primaryButtonText}>{t('staking_btn')}</Text>
+
+        <View style={[globalStyles.card, { paddingTop: 24 }]}>
+          <View style={globalStyles.cardHeader}>
+            <Text style={globalStyles.cardLabel}>{t('receive_lbl')} ({activeSymbol})</Text>
+            <Text style={localStyles.apyText}>{displayApy} APY</Text>
+          </View>
+          {loading ? <ActivityIndicator color="#a855f7" style={{alignSelf: 'flex-end', marginVertical: 10}} /> : <Text style={globalStyles.amountInputLarge}>{estimatedOut}</Text>}
+        </View>
+
+        <TouchableOpacity style={[globalStyles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 30 }]} disabled={!quote || loading} onPress={() => quote && setShowConfirm(true)}>
+          <Text style={globalStyles.primaryButtonText}>{t('staking_btn')}</Text>
         </TouchableOpacity>
       </ScrollView>
+
       <ConfirmModal visible={showConfirm} title={t('confirm_stake_title')} message={`${amount} SOL -> ${estimatedOut} ${activeSymbol}`} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doStake(); }} />
       <SuccessModal visible={showSuccess} message={t('stake_success_msg')} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
-      {showBanner && <View style={[localStyles.bannerContainer, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
+      
+      {showBanner && <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
     </View>
   );
 };
 
 const localStyles = StyleSheet.create({
-  sectionLabel: { color: '#888', fontSize: 12, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
   lstSelector: { flexDirection: 'row', marginBottom: 24 },
   lstChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, marginRight: 12, borderWidth: 1, borderColor: '#333' },
   lstChipActive: { borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)' },
   lstChipText: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 10 },
-  card: { backgroundColor: '#1e1e1e', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#333' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  label: { color: '#aaa', fontSize: 14, fontWeight: '600' },
-  balanceText: { color: '#888', fontSize: 12 },
   apyText: { color: '#22c55e', fontWeight: 'bold', fontSize: 14 },
-  amountInput: { fontSize: 32, color: '#fff', fontWeight: 'bold', textAlign: 'right', padding: 0 },
   arrowCircle: { backgroundColor: '#111', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  bannerContainer: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'flex-end', paddingTop: 8, backgroundColor: 'rgba(0,0,0,0.8)' },
-  percentRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  percentBtn: { backgroundColor: '#2a2a2a', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#444' },
-  percentText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold' },
 });

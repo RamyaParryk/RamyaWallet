@@ -14,95 +14,143 @@ export const styles = StyleSheet.create({
   primaryButtonText: { color: 'black', fontWeight: 'bold', fontSize: 16 },
   secondaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 20, padding: 10 },
   secondaryButtonText: { color: '#a855f7', fontWeight: 'bold', fontSize: 14 },
-  descText: { color: '#888', marginBottom: 20, lineHeight: 20, fontSize: 16 }, // 文字サイズUP
-  infoCard: { backgroundColor: '#1a1a1a', padding: 15, borderRadius: 16, marginBottom: 15, borderWidth: 1, borderColor: '#333' },
-  label: { color: '#666', fontSize: 14, marginBottom: 8 }, // 文字サイズUP
-  valueText: { color: 'white', fontFamily: 'monospace', fontSize: 13 },
-  secretText: { color: '#eab308', fontFamily: 'monospace', fontSize: 12, lineHeight: 16 },
-  hiddenText: { color: '#444', fontStyle: 'italic', fontSize: 12 },
-  warningBox: { flexDirection:'row', gap:10, backgroundColor:'#422006', padding:15, borderRadius:12, alignItems:'center', marginBottom:20 },
-  warningText: { color:'#fcd34d', fontSize:12, flex:1 },
-  bottomNav: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 15, backgroundColor: '#111', borderTopWidth: 1, borderTopColor: '#222' },
-  navBtn: { alignItems: 'center' },
-  navText: { fontSize: 12, color: '#666', marginTop: 4, fontWeight:'bold' }, // 文字サイズUP
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'android' ? 50 : 20, alignItems:'center' },
-  headerTitle: { color:'white', fontSize:20, fontWeight:'bold', textAlign:'center', flex:1 }, // 文字サイズUP
-  addressPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a1a1a', padding: 8, borderRadius: 20, gap: 8 },
-  greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
-  addressText: { color: '#ccc', fontSize: 12, fontFamily: 'monospace' },
-  iconBtn: { padding: 8, backgroundColor: '#1a1a1a', borderRadius: 20 },
-  balanceSection: { alignItems: 'center', paddingVertical: 20 },
-  bigBalance: { color: 'white', fontSize: 48, fontWeight: 'bold', marginVertical: 10 }, // 文字サイズ大幅UP
-  actionRow: { flexDirection: 'row', gap: 30, marginTop: 20 },
-  actionCircle: { width: 56, height: 56, borderRadius: 18, backgroundColor: '#1a1a1a', alignItems:'center', justifyContent:'center' },
-  assetsCard: { backgroundColor: '#111', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, minHeight: 400, marginTop: 20 },
-  assetsHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  sectionTitle: { color: '#888', fontWeight: 'bold' },
-  linkText: { color: '#a855f7', fontWeight: 'bold' },
-  assetRow: { flexDirection:'row', justifyContent:'space-between', paddingVertical: 15, borderBottomWidth:1, borderBottomColor:'#1a1a1a' },
-  coinIcon: { width:40, height:40, borderRadius:20, alignItems:'center', justifyContent:'center' },
-  assetSym: { color:'white', fontWeight:'bold', fontSize: 16 }, // 文字サイズUP
-  assetAmt: { color:'#666', fontSize:14 }, // 文字サイズUP
-  assetVal: { color:'white', fontWeight:'bold', fontSize: 16 }, // 文字サイズUP
-  swapCard: { backgroundColor: '#1a1a1a', padding: 20, borderRadius: 24, gap: 10 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems:'center' },
-  input: { fontSize: 32, fontWeight: 'bold', color: 'white', padding: 0 },
-  balanceText: { color: '#666', fontSize: 12, textAlign: 'right' },
-  arrowCircle: { backgroundColor: '#222', padding: 8, borderRadius: 12, borderWidth: 4, borderColor: 'black' },
-  tokenBtn: { flexDirection:'row', alignItems:'center', gap:5, backgroundColor:'#333', paddingHorizontal:12, paddingVertical:6, borderRadius:20 },
-  tokenBtnText: { color:'white', fontWeight:'bold' },
-  infoBox: { backgroundColor: '#3b0764', padding: 15, borderRadius: 12, marginVertical: 15 },
-  infoText: { color: '#d8b4fe', fontSize: 14 }, // 文字サイズUP
-  modalOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#1a1a1a', height: '60%', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
-  tokenItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#333' },
-  tokenSym: { color: 'white', fontWeight: 'bold' },
-  tokenName: { color: '#666', fontSize: 12 },
-  sectionHeader: { color: '#666', fontSize: 12, fontWeight: 'bold', marginBottom: 10, marginTop: 10 },
-  settingItem: { flexDirection:'row', alignItems:'center', paddingVertical:16, borderBottomWidth:1, borderBottomColor:'#222', gap:15 },
-  settingIcon: { width:32, height:32, borderRadius:8, backgroundColor:'#222', alignItems:'center', justifyContent:'center' },
-  settingText: { color:'white', fontSize:18, flex:1 }, // 文字サイズUP
-  settingGroup: { backgroundColor:'#1a1a1a', borderRadius:16, paddingHorizontal:15 },
-  versionText: { textAlign:'center', color:'#444', fontSize:12, marginTop:40 },
-  networkItem: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:15, borderBottomWidth:1, borderBottomColor:'#222' },
-  networkItemActive: {  },
-  descTextSmall: { color:'#666', fontSize:14 }, // 文字サイズUP
-  notification: { position: 'absolute', top: Platform.OS === 'android' ? 60 : 50, alignSelf: 'center', backgroundColor: '#333', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, zIndex: 100 },
-  notificationText: { color: 'white', fontWeight: 'bold' },
-  backButton: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  backButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  mnemonicContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  wordTag: { flexDirection: 'row', backgroundColor: '#1a1a1a', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, gap: 6 },
-  wordNum: { color: '#666', fontSize: 12 },
-  wordText: { color: 'white', fontWeight: 'bold' },
-  pinContainer: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
-  pinTitle: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  pinDesc: { color: '#888', marginBottom: 40 },
+  descText: { color: '#aaa', fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 30 },
+  label: { color: '#888', fontSize: 14, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  actionCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  navBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, flex: 1 },
+  navText: { fontSize: 12, color: '#666', marginTop: 4, fontWeight: '600' },
+  bottomNav: { flexDirection: 'row', backgroundColor: '#111', paddingBottom: Platform.OS === 'ios' ? 24 : 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#222' },
+  tokenItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#111', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#222' },
+  tokenSym: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  tokenName: { color: '#888', fontSize: 14 },
+  tokenBal: { color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'right' },
+  tokenVal: { color: '#22c55e', fontSize: 14, textAlign: 'right' },
+  input: { backgroundColor: '#1a1a1a', color: 'white', padding: 16, borderRadius: 16, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: '#333' },
+  
+  // PIN関連
+  pinContainer: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  pinTitle: { fontSize: 24, color: '#fff', fontWeight: 'bold', marginBottom: 40 },
+  pinDesc: { color: '#aaa', fontSize: 16, textAlign: 'center', marginBottom: 40 }, 
   pinDots: { flexDirection: 'row', gap: 20, marginBottom: 60 },
-  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: '#666' },
-  dotActive: { backgroundColor: '#a855f7', borderColor: '#a855f7' },
-  numPad: { flexDirection: 'row', flexWrap: 'wrap', width: 300, justifyContent: 'center', gap: 20 },
-  numBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#222', alignItems: 'center', justifyContent: 'center' },
-  numText: { color: 'white', fontSize: 28, fontWeight: 'bold' },
+  dot: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#333' },
+  dotActive: { backgroundColor: '#a855f7' },
+  numPad: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: 280, gap: 20 },
+  numBtn: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#1a1a1a', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#333' },
   numBtnPlaceholder: { width: 70, height: 70 },
+  numText: { fontSize: 28, color: '#fff', fontWeight: 'bold' },
+  
+  notification: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 20, right: 20, backgroundColor: '#22c55e', padding: 16, borderRadius: 12, alignItems: 'center', zIndex: 100, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  notificationText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  wordTag: { backgroundColor: '#1a1a1a', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, flexDirection: 'row', width: '48%', marginBottom: 12, borderWidth: 1, borderColor: '#333' },
+  wordNum: { color: '#666', marginRight: 8, fontSize: 14, width: 20 },
+  wordText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  mnemonicContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
+  warningBox: { backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
+  warningText: { color: '#ef4444', marginLeft: 12, flex: 1, fontSize: 14, lineHeight: 20 },
   closeButton: { position: 'absolute', top: Platform.OS === 'android' ? 60 : 50, right: 30, padding: 10 },
   mnemonicInput: { backgroundColor: '#1a1a1a', color: 'white', padding: 15, borderRadius: 12, fontSize: 16, height: 120, textAlignVertical: 'top', marginBottom: 20 },
   inputField: { backgroundColor:'#222', color:'white', padding:16, borderRadius:12, fontSize:16, marginBottom:16 },
   
-  // ヘルプ画面用スタイル
+  // ヘルプ関連
   helpItemContainer: { backgroundColor: '#1a1a1a', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
   helpHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
   helpIconBadge: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   helpTitle: { color: 'white', fontWeight: 'bold', fontSize: 15, flex: 1 },
   helpDesc: { color: '#aaa', fontSize: 13, lineHeight: 20, marginLeft: 38 },
+  modalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
 
-  // 利用規約モーダル用
-  //rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  termTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginTop: 15, marginBottom: 5 },
-  termText: { color: '#ccc', fontSize: 14, lineHeight: 20, marginBottom: 10 },
+  // モーダル全体関連 (🌟 今回追加)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#333',
+    width: '100%',
+  },
 
-  // Jito Badge
-  jitoBadge: { backgroundColor:'#a855f7', borderRadius:4, paddingHorizontal:4, marginLeft: 6, flexDirection:'row', alignItems:'center' }, 
-  jitoText: { color:'white', fontSize:10, marginLeft: 2 } 
+  // アドレス帳・リスト関連
+  settingItem: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#1a1a1a', borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
+  settingText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  descTextSmall: { color: '#888', fontSize: 13 },
+
+  // 🌟 1. 共通カードレイアウト (Card)
+  card: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+    overflow: 'hidden',
+    width: '100%',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardLabel: {
+    color: '#aaa',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // 🌟 2. 金額入力フィールド（大文字）
+  amountInputLarge: {
+    fontSize: 32,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'right',
+    padding: 0,
+  },
+
+  // 🌟 3. パーセントボタン（10%, 50%, MAX）
+  percentRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  percentBtn: {
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  percentText: {
+    color: '#a855f7',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
+  // 🌟 4. セクションタイトル
+  sectionTitle: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+    marginTop: 16,
+  },
+
+  // 🌟 5. 下部固定広告コンテナ
+  bannerContainerFixed: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
 });

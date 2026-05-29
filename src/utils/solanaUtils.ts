@@ -1,6 +1,7 @@
 import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { SeedVault } from '@solana-mobile/seed-vault-lib';
 import { Buffer } from 'buffer';
+import nacl from 'tweetnacl';
 
 export const fetchTransactionHistory = async (connection: Connection, address: string) => {
   try {
@@ -45,29 +46,27 @@ export const secretKeyToString = (secretKey: Uint8Array) => {
 
 export const parseSolanaError = (error: any, t: any) => {
   const msg = error?.message || String(error);
-  let translated = t('err_unknown'); // デフォルトは「不明なエラー」
+  let translated = t('err_unknown') || '不明なエラー';
 
-  // エラーの内容に応じて適切な翻訳キーをセット
   if (msg.includes("InsufficientFunds") || msg.includes("insufficient funds") || msg.includes("custom program error: 0x1\n") || msg.includes("custom program error: 0x1 ")) {
-    translated = t('err_insufficient_funds');
+    translated = t('err_insufficient_funds') || '残高が不足しています';
   } else if (msg.includes("InvalidAccountData") || msg.includes("AccountNotFound")) {
-    translated = t('err_invalid_account');
+    translated = t('err_invalid_account') || '無効なアカウントです';
   } else if (msg.includes("Slippage tolerance exceeded") || msg.includes("0x1771") || msg.includes("0x1788") || msg.includes("6024")) {
-    translated = t('err_slippage');
+    translated = t('err_slippage') || 'スリッページエラー';
   } else if (msg.includes("timeout") || msg.includes("Transaction was not confirmed")) {
-    translated = t('err_timeout');
+    translated = t('err_timeout') || 'タイムアウトしました';
   } else if (msg.includes("User rejected") || msg.includes("1007")) {
-    translated = t('err_rejected');
+    translated = t('err_rejected') || 'リクエストが拒否されました';
   } else if (msg.includes("signature verification")) {
-    translated = t('err_signature_mismatch');
+    translated = t('err_signature_mismatch') || '署名の検証に失敗しました';
   }
 
-  // 翻訳されたメッセージの下に、開発者用の生ログを添えて返す
   return `${translated}\n\n[Raw Log]\n${msg}`;
 };
 
 // ========================================================
-// Seed Vault 署名ラッパー (Transaction Message部分の署名)
+// 🌟 Seed Vault 署名ラッパー (真の完成版)
 // ========================================================
 export const signWithSeedVault = async (
   txBytes: Uint8Array,
@@ -75,8 +74,8 @@ export const signWithSeedVault = async (
 ): Promise<Uint8Array> => {
   const SV: any = SeedVault;
 
-  if (!wallet?.authToken) {
-    throw new Error('Seed Vault authToken missing');
+  if (!wallet?.authToken || !wallet?.derivationPath) {
+    throw new Error('Seed Vault authToken or derivationPath is missing');
   }
 
   const vTx = VersionedTransaction.deserialize(txBytes);
@@ -90,40 +89,16 @@ export const signWithSeedVault = async (
     throw new Error(`Seed Vault signer not found in transaction. wallet=${wallet.address}`);
   }
 
-  if (signerIndex >= vTx.signatures.length) {
-    throw new Error(`Signer index is outside signature array. index=${signerIndex}, signatures=${vTx.signatures.length}`);
-  }
-
+  // 🌟 あなたが暴き出した真実：txBytesではなくmessageBytesを渡す！
   const messageBytes = vTx.message.serialize();
   const base64Message = Buffer.from(messageBytes).toString('base64');
-
+  
   const requestPayload = {
-    payload: base64Message,
-    requestedSignatures: [wallet.address],
+    payload: base64Message, 
+    requestedSignatures: [wallet.derivationPath],
   };
 
-  let payloads: any[];
-
-  try {
-    payloads = await SV.signTransactions(wallet.authToken, [requestPayload]);
-  } catch (e) {
-    let pathStr = wallet.derivationPath;
-
-    if (typeof pathStr === 'string') {
-      pathStr = pathStr.replace('bip32:/', '').replace('bip32:', '');
-    } else if (pathStr?.account !== undefined) {
-      pathStr = `m/44'/501'/${pathStr.account}'/0'`;
-    } else {
-      pathStr = "m/44'/501'/0'/0'";
-    }
-
-    payloads = await SV.signTransactions(wallet.authToken, [
-      {
-        payload: base64Message,
-        requestedSignatures: [`bip32:/${pathStr}`],
-      },
-    ]);
-  }
+  const payloads = await SV.signTransactions(wallet.authToken.toString(), [requestPayload]);
 
   if (!payloads || payloads.length === 0) {
     throw new Error('Seed Vault returned an empty payload.');
@@ -151,15 +126,29 @@ export const signWithSeedVault = async (
   if (!sigBytes || sigBytes.length !== 64) {
     throw new Error(`Seed Vault did not return a valid 64-byte signature.`);
   }
-
+  // 🌟 最強のローカル検証
+  const ok = nacl.sign.detached.verify(
+    messageBytes,
+    sigBytes,
+    walletPubkey.toBytes()
+  );
+  if (!ok) {
+    throw new Error(`鍵の不一致エラー\nアプリのアドレス: ${shortenAddress(wallet.address)}\nSeed Vaultのパス: ${wallet.derivationPath}\n\n※アプリのウォレット設定から一度削除し、再度インポート（連携）し直してください。`);
+  }
   vTx.signatures[signerIndex] = sigBytes;
   return vTx.serialize();
 };
-
 export const signMessageWithSeedVault = async (msgBytes: Uint8Array, wallet: any): Promise<Uint8Array> => {
   const SV: any = SeedVault;
+  if (!wallet?.authToken || !wallet?.derivationPath) {
+    throw new Error('Seed Vault authToken or derivationPath is missing');
+  }
+
   const base64Msg = Buffer.from(msgBytes).toString('base64'); 
-  const payloads = await SV.signMessages(wallet.authToken, [{ payload: base64Msg, requestedSignatures: [wallet.address] }]);
+  const payloads = await SV.signMessages(wallet.authToken.toString(), [{ 
+    payload: base64Msg, 
+    requestedSignatures: [wallet.derivationPath] 
+  }]);
 
   if (!payloads || payloads.length === 0) throw new Error("Seed Vault returned an empty payload.");
   

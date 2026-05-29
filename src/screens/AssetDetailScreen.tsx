@@ -3,15 +3,17 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions
 import { ChevronLeft, AlertTriangle, Image as ImageIcon, Flame, RefreshCw, ArrowUpRight, Trash2 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { PublicKey, Transaction, Keypair, ComputeBudgetProgram } from '@solana/web3.js';
+import { PublicKey, Transaction, Keypair, ComputeBudgetProgram, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { createBurnInstruction, createCloseAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { createBurnNftInstruction } from '@metaplex-foundation/mpl-token-metadata';
 
+import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
 import { useWalletStore } from '../state/walletStore';
 import { useConnectionStore } from '../state/connectionStore';
 import { ConfirmModal, SimpleAlertModal, SuccessModal } from '../components/ActionModals';
 import { SOL_MINT } from '../constants/config';
 import { refreshAssetsService } from '../services/refreshAssets';
+import { signWithSeedVault } from '../utils/solanaUtils'; 
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +31,6 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   const [alert, setAlert] = useState({ visible: false, title: '', message: '', type: 'error' });
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // 説明文（About）用のステート
   const [description, setDescription] = useState<string | null>(null);
   const [descLoading, setDescLoading] = useState(false);
 
@@ -45,42 +46,27 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   const showBurnButton = !isNative && (asset.possibleSpam || !isToken || isEmpty || (!isMajor && assetValue < 0.1));
   const showSkinButton = !isToken;
 
-  // ★ 説明文の取得ロジック（NFTとトークンで分岐）
   useEffect(() => {
     const fetchDescription = async () => {
-      // 1. NFTの場合は、すでにassetに入っているdescriptionをそのまま使う
       if (isNFT) {
-        if (asset.description) {
-          setDescription(asset.description);
-        }
+        if (asset.description) setDescription(asset.description);
         return;
       }
-
-      // 2. トークンの場合はJupiter APIから取得する
       if (isToken) {
         try {
           setDescLoading(true);
           setDescription(null);
-
-          const actualMint = asset.mint === 'native' || asset.mint === SOL_MINT 
-            ? 'So11111111111111111111111111111111111111112' 
-            : asset.mint;
-
+          const actualMint = asset.mint === 'native' || asset.mint === SOL_MINT ? 'So11111111111111111111111111111111111111112' : asset.mint;
           const res = await fetch(`https://tokens.jup.ag/token/${actualMint}`);
           if (!res.ok) throw new Error("Metadata API Error");
-
           const json = await res.json();
-          if (json && json.summary) {
-            setDescription(json.summary.trim());
-          }
+          if (json && json.summary) setDescription(json.summary.trim());
         } catch (error) {
-          console.log("[DESC DEBUG] Fetch error:", error);
         } finally {
           setDescLoading(false);
         }
       }
     };
-
     fetchDescription();
   }, [asset.mint, isToken, isNFT, asset.description]);
 
@@ -100,7 +86,6 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
     setLoading(true);
 
     try {
-      console.log(`\n[BURN DEBUG] 1. 償却開始: ${asset.name} (${asset.mint})`);
       const userPubkey = new PublicKey(wallet.address);
       const mintPubkey = new PublicKey(asset.mint);
       
@@ -124,14 +109,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
           const [editionPDA] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer(), Buffer.from("edition")], METADATA_PROGRAM_ID);
 
           tx.add(
-            createBurnNftInstruction({
-              metadata: metadataPDA,
-              owner: userPubkey,
-              mint: mintPubkey,
-              tokenAccount: tokenAccount,
-              masterEditionAccount: editionPDA,
-              splTokenProgram: TOKEN_PROGRAM_ID,
-            })
+            createBurnNftInstruction({ metadata: metadataPDA, owner: userPubkey, mint: mintPubkey, tokenAccount: tokenAccount, masterEditionAccount: editionPDA, splTokenProgram: TOKEN_PROGRAM_ID })
           );
         } else {
           tx.add(createBurnInstruction(tokenAccount, mintPubkey, userPubkey, rawAmount, [], programId));
@@ -144,8 +122,18 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       tx.recentBlockhash = blockhash;
       tx.feePayer = userPubkey;
 
-      const keypair = Keypair.fromSecretKey(wallet.secretKey);
-      const signature = await connection.sendTransaction(tx, [keypair]);
+      let signature = '';
+
+      if (wallet.walletType === 'seed-vault') {
+        const messageV0 = new TransactionMessage({ payerKey: userPubkey, recentBlockhash: blockhash, instructions: tx.instructions }).compileToV0Message();
+        const vTx = new VersionedTransaction(messageV0);
+        const signedTxBytes = await signWithSeedVault(vTx.serialize(), wallet);
+        signature = await connection.sendRawTransaction(signedTxBytes, { skipPreflight: false, preflightCommitment: 'confirmed' });
+      } else {
+        if (!wallet.secretKey) throw new Error("シークレットキーがありません");
+        const keypair = Keypair.fromSecretKey(wallet.secretKey);
+        signature = await connection.sendTransaction(tx, [keypair]);
+      }
       
       const confirmation = await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
       if (confirmation.value.err) throw new Error(JSON.stringify(confirmation.value.err));
@@ -154,7 +142,6 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
       setShowSuccess(true);
 
     } catch (error: any) {
-      console.error(`[BURN DEBUG] 🚨 Catch Error:`, error.message);
       let errorTitle = t('error') || 'Failed';
       let errorMessage = error.message;
 
@@ -254,23 +241,20 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* ★ 修正：説明文セクション（NFTでもトークンでも共通で表示） */}
         {(description || descLoading) && (
           <View style={localStyles.aboutContainer}>
             <Text style={localStyles.aboutTitle}>About {asset.name}</Text>
             {descLoading ? (
               <ActivityIndicator size="small" color="#555" style={{ alignSelf: 'flex-start', marginTop: 10 }} />
             ) : (
-              <Text style={localStyles.aboutText}>
-                {description}
-              </Text>
+              <Text style={localStyles.aboutText}>{description}</Text>
             )}
           </View>
         )}
 
         {(showSkinButton || showBurnButton) && (
           <>
-            <Text style={localStyles.sectionTitle}>{t('advanced_options') || 'Advanced Options'}</Text>
+            <Text style={globalStyles.sectionTitle}>{t('advanced_options') || 'Advanced Options'}</Text>
             <View style={localStyles.advancedContainer}>
               
               {showSkinButton && (
@@ -290,11 +274,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
                   onPress={() => setBurnConfirm(true)}
                   disabled={loading}
                 >
-                  {isEmpty ? (
-                    <Trash2 size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                  ) : (
-                    <Flame size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                  )}
+                  {isEmpty ? <Trash2 size={20} color="#ef4444" style={{ marginRight: 12 }} /> : <Flame size={20} color="#ef4444" style={{ marginRight: 12 }} />}
                   <Text style={localStyles.burnBtnText}>
                     {loading ? (t('processing') || "Processing...") : (isEmpty ? (t('clean_up_empty') || "Clean up empty account (~0.002 SOL)") : (t('burn_asset') || "Burn (Reclaim ~0.002 SOL)"))}
                   </Text>
@@ -307,15 +287,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
 
       </ScrollView>
 
-      <ConfirmModal 
-        visible={burnConfirm} 
-        title={isEmpty ? (t('clean_up_title') || "Clean Up?") : (t('burn_confirm_title') || "Burn Asset?")} 
-        message={isEmpty ? (t('clean_up_msg') || "This will close the empty token account and reclaim the storage rent.") : (t('burn_confirm_msg') || "This action cannot be undone. The asset will be permanently destroyed.")} 
-        confirmText={isEmpty ? (t('clean_up_btn_confirm') || "Clean Up 🧹") : (t('burn_btn_confirm') || "Burn 🔥")} 
-        cancelText={t('cancel') || "Cancel"} 
-        onCancel={() => setBurnConfirm(false)} 
-        onConfirm={handleBurn} 
-      />
+      <ConfirmModal visible={burnConfirm} title={isEmpty ? (t('clean_up_title') || "Clean Up?") : (t('burn_confirm_title') || "Burn Asset?")} message={isEmpty ? (t('clean_up_msg') || "This will close the empty token account and reclaim the storage rent.") : (t('burn_confirm_msg') || "This action cannot be undone. The asset will be permanently destroyed.")} confirmText={isEmpty ? (t('clean_up_btn_confirm') || "Clean Up 🧹") : (t('burn_btn_confirm') || "Burn 🔥")} cancelText={t('cancel') || "Cancel"} onCancel={() => setBurnConfirm(false)} onConfirm={handleBurn} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, visible: false })} />
       <SuccessModal visible={showSuccess} message={isEmpty ? (t('clean_up_success') || "Cleaned up!") : (t('burn_success') || "Asset Burned!")} onDone={() => { setShowSuccess(false); onBack(); }} />
     </View>
@@ -328,30 +300,22 @@ const localStyles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
   scrollContent: { paddingBottom: 40 },
-  
   spamWarning: { flexDirection: 'row', backgroundColor: 'rgba(69, 26, 3, 0.9)', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#78350f' },
   spamText: { color: '#fcd34d', flex: 1, fontSize: 14, fontWeight: '500', lineHeight: 20 },
-
   tokenHeaderContainer: { alignItems: 'center', paddingTop: 32, paddingBottom: 16, overflow: 'hidden' },
   tokenIconWrapper: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#333' },
   balanceAmount: { color: '#fff', fontSize: 36, fontWeight: 'bold', textAlign: 'center' },
   balanceFiat: { color: '#22c55e', fontSize: 18, fontWeight: '600', marginTop: 4 },
-
   nftImageContainer: { width: width, height: width, backgroundColor: 'rgba(17, 17, 17, 0.5)', justifyContent: 'center', alignItems: 'center' },
   mainImage: { width: '100%', height: '100%' },
   imagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
-
   mainActionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 32 },
   tradeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12 },
-
-  sectionTitle: { color: '#888', fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 12, paddingHorizontal: 16, letterSpacing: 1, marginTop: 16 },
   advancedContainer: { paddingHorizontal: 16, gap: 12 },
-  
   secondaryBtn: { flexDirection: 'row', backgroundColor: 'rgba(26, 26, 26, 0.8)', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   secondaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   burnBtn: { flexDirection: 'row', backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)' },
   burnBtnText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
-
   aboutContainer: { paddingHorizontal: 16, marginBottom: 32 },
   aboutTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   aboutText: { color: '#aaa', fontSize: 14, lineHeight: 22, fontWeight: '400' },

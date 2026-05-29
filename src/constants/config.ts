@@ -49,8 +49,8 @@ export const LST_APY_APIS = {
   SOLBLAZE: 'https://stake.solblaze.org/api/v1/apy', // 🌟 予備（検証済みの通るURL！）
 };
 
-export const YOUTUBE_URL = "https://www.youtube.com/@ramyaparryk";
 export const GITHUB_URL = "https://ramyaparryk.github.io/RamyaWallet/";
+export const PRIVACY_URL = "https://ramyaparryk.github.io/RamyaWallet/privacy_en.html";
 
 export const MY_PLATFORM_FEE_BPS = 0;
 export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');

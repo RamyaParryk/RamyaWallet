@@ -1,28 +1,25 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, FlatList, Modal, StyleSheet, ScrollView, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ArrowDown, X, Search, Shield, BadgeCheck } from 'lucide-react-native';
+import { ArrowDown, X, Search } from 'lucide-react-native';
 import { VersionedTransaction, Keypair, PublicKey } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { ReferralProvider } from '@jup-ag/referral-sdk';
 
 import { MY_PLATFORM_FEE_BPS, MY_FEE_ACCOUNT } from '../constants/config';
-import { signWithSeedVault, parseSolanaError } from '../utils/solanaUtils'; 
+import { signWithSeedVault, parseSolanaError, shortenAddress } from '../utils/solanaUtils'; 
 import { TokenIcon } from '../components/TokenIcon';
 import { ConfirmModal, SuccessModal, SimpleAlertModal } from '../components/ActionModals';
 import { refreshAssetsService } from '../services/refreshAssets';
 import { jupiterQuoteApi } from '../services/jupiterService'; 
+import { styles as globalStyles } from '../styles/globalStyles'; // 🌟 グローバルスタイルをインポート
 
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BAD_MINTS_KEY = 'ramya_bad_icon_mints_v1';
 const BANNER_ESTIMATED_HEIGHT = 60; 
-
-const shortenAddress = (address: string, chars = 4) => {
-  if (!address) return '';
-  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
-};
 
 function isValidLogo(uri?: string) {
   if (!uri) return false;
@@ -36,6 +33,7 @@ function isValidLogo(uri?: string) {
 }
 
 export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFetch, solBalance, tokenBalances, preSelectedAsset }: any) => {
+  const insets = useSafeAreaInsets();
   const [badMints, setBadMints] = useState<Set<string>>(new Set());
   const adUnitId = useMemo(() => (Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : ''), []);
   const showBanner = adUnitId.length > 0;
@@ -84,24 +82,16 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
   const [modalSide, setModalSide] = useState<'from' | 'to'>('from');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 状態の維持とpreSelectedAssetのハンドリング
   useEffect(() => {
     if (iconFilteredTokenList.length > 0) {
       setFromToken((prev: any) => {
-        // すでに選択済みのトークンがあればそれを維持
         if (prev?.address || prev?.mint) return prev;
-        
-        // 詳細画面からの遷移（preSelectedAssetがある）ならそれを優先
-        if (preSelectedAsset) {
-          return iconFilteredTokenList.find((x: any) => x.address === preSelectedAsset.mint) || preSelectedAsset;
-        }
-        // デフォルトはSOL
+        if (preSelectedAsset) return iconFilteredTokenList.find((x: any) => x.address === preSelectedAsset.mint) || preSelectedAsset;
         return iconFilteredTokenList.find((x: any) => x.symbol === 'SOL') || iconFilteredTokenList[0];
       });
 
       setToToken((prev: any) => {
         if (prev?.address || prev?.mint) return prev;
-        
         const currentFromSymbol = preSelectedAsset?.symbol || 'SOL';
         const fallbackSymbol = currentFromSymbol === 'USDC' ? 'SOL' : 'USDC';
         return iconFilteredTokenList.find((x: any) => x.symbol === fallbackSymbol) || iconFilteredTokenList[1] || iconFilteredTokenList[0];
@@ -153,22 +143,19 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
         } catch {}
       }
 
-      // 最強の商用ウォレット最適化パラメータ（v6）
-        const requestParams: any = {
+      const requestParams: any = {
         quoteResponse: quote,
         userPublicKey: wallet.address,
         wrapAndUnwrapSol: true,
         dynamicComputeUnitLimit: true as any,
-        
-        // SDKのバグを回避するため、文字列 "auto" ではなくオブジェクト形式にする
         prioritizationFeeLamports: {
           priorityLevelWithMaxLamports: { priorityLevel: "high", maxLamports: 5000000 }
         },
-        
-        dynamicSlippage: true,          // スリッページエラー防止
-        useSharedAccounts: true,        // 中間ATA作成費用の回避（超重要）
-        skipUserAccountsRpcCalls: true, // 速度向上
+        useSharedAccounts: true,
+        skipUserAccountsRpcCalls: true,
       };
+
+      if (feeAccountStr) requestParams.feeAccount = feeAccountStr;
 
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: requestParams });
       if (!swapResult?.swapTransaction) throw new Error('No transaction');
@@ -218,112 +205,103 @@ export const SwapScreen = ({ t, wallet, tokenList, notify, connection, onRetryFe
 
   return (
     <View style={localStyles.container}>
-      <Text style={localStyles.screenTitle}>{t('swap')}</Text>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[localStyles.scrollContent, { paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }]}>
-        <View style={localStyles.card}>
-          <View style={localStyles.cardHeader}>
-            <Text style={localStyles.cardLabel}>{t('pay')}</Text>
-            <Text style={localStyles.balanceText}>{t('available')}: {Number(currentBalance).toLocaleString()}</Text>
+      <Text style={globalStyles.screenTitle}>{t('swap')}</Text>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
+        
+        <View style={globalStyles.card}>
+          <View style={globalStyles.cardHeader}>
+            <Text style={globalStyles.cardLabel}>{t('pay')}</Text>
+            <Text style={{ color: '#aaa', fontSize: 12 }}>{t('available')}: {Number(currentBalance).toLocaleString()}</Text>
           </View>
           <View style={localStyles.inputRow}>
-            <TextInput style={[localStyles.amountInput, { fontSize: amount.length > 10 ? 24 : 32, textAlign: 'right' }]} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
+            <TextInput style={[globalStyles.amountInputLarge, { fontSize: amount.length > 10 ? 24 : 32 }]} placeholder="0" placeholderTextColor="#555" keyboardType="numeric" value={amount} onChangeText={setAmount} />
             <TouchableOpacity style={localStyles.tokenSelectBtn} onPress={() => { setModalSide('from'); setModalVisible(true); }}>
               <TokenIcon uri={fromToken.logoURI} symbol={fromToken.symbol} mint={fromToken.address || fromToken.mint} size={36} onBadIcon={(mint) => markBadMint(mint)} />
-              <View style={{ marginLeft: 8, flex: 1 }}><Text style={localStyles.tokenSymbol}>{fromToken.symbol}</Text><Text style={localStyles.tokenAddress} numberOfLines={1}>{shortenAddress(fromToken.address || fromToken.mint)}</Text></View>
+              <View style={{ marginLeft: 8, flex: 1 }}><Text style={globalStyles.tokenSym}>{fromToken.symbol}</Text><Text style={{ color: '#888', fontSize: 10 }} numberOfLines={1}>{shortenAddress(fromToken.address || fromToken.mint)}</Text></View>
               <ArrowDown size={16} color="#aaa" />
             </TouchableOpacity>
           </View>
-          <View style={localStyles.percentRow}>
+          <View style={globalStyles.percentRow}>
             {[10, 50, 100].map((p) => (
               <TouchableOpacity key={p} onPress={() => {
                   let final = Number(currentBalance) * (p / 100);
-                  if (p === 100 && fromToken.symbol === 'SOL') final = Math.max(0, final - 0.01);
-                  setAmount(final.toFixed(6).replace(/\.?0+$/, ''));
-                }} style={localStyles.percentBtn}><Text style={localStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text></TouchableOpacity>
+                  if (p === 100 && fromToken.symbol === 'SOL') {
+                    final = Math.max(0, final - 0.005);
+                  }
+                  const dec = fromToken.decimals !== undefined ? fromToken.decimals : 9;
+                  setAmount(final.toFixed(dec).replace(/\.?0+$/, ''));
+                }} style={globalStyles.percentBtn}><Text style={globalStyles.percentText}>{p === 100 ? 'MAX' : `${p}%`}</Text></TouchableOpacity>
             ))}
           </View>
         </View>
+
         <View style={localStyles.switchContainer}><TouchableOpacity style={localStyles.switchBtn} onPress={handleSwitch}><ArrowDown size={24} color="#a855f7" /></TouchableOpacity></View>
-        <View style={[localStyles.card, { paddingTop: 24 }]}>
-          <View style={localStyles.cardHeader}><Text style={localStyles.cardLabel}>{t('receive_lbl')}</Text></View>
+        
+        <View style={[globalStyles.card, { paddingTop: 24 }]}>
+          <View style={globalStyles.cardHeader}><Text style={globalStyles.cardLabel}>{t('receive_lbl')}</Text></View>
           <View style={localStyles.inputRow}>
-            {loading ? <ActivityIndicator color="#a855f7" style={{ marginLeft: 'auto', marginRight: 10 }} /> : <Text style={[localStyles.amountInput, { color: quote ? '#fff' : '#666', fontSize: displayOutAmount.length > 10 ? 24 : 32, textAlign: 'right' }]}>{displayOutAmount}</Text>}
+            {loading ? <ActivityIndicator color="#a855f7" style={{ marginLeft: 'auto', marginRight: 10 }} /> : <Text style={[globalStyles.amountInputLarge, { color: quote ? '#fff' : '#666', fontSize: displayOutAmount.length > 10 ? 24 : 32 }]}>{displayOutAmount}</Text>}
             <TouchableOpacity style={localStyles.tokenSelectBtn} onPress={() => { setModalSide('to'); setModalVisible(true); }}>
               <TokenIcon uri={toToken.logoURI} symbol={toToken.symbol} mint={toToken.address || toToken.mint} size={36} onBadIcon={(mint) => markBadMint(mint)} />
-              <View style={{ marginLeft: 8, flex: 1 }}><Text style={localStyles.tokenSymbol}>{toToken.symbol}</Text><Text style={localStyles.tokenAddress} numberOfLines={1}>{shortenAddress(toToken.address || toToken.mint)}</Text></View>
+              <View style={{ marginLeft: 8, flex: 1 }}><Text style={globalStyles.tokenSym}>{toToken.symbol}</Text><Text style={{ color: '#888', fontSize: 10 }} numberOfLines={1}>{shortenAddress(toToken.address || toToken.mint)}</Text></View>
               <ArrowDown size={16} color="#aaa" />
             </TouchableOpacity>
           </View>
         </View>
+
         <View style={localStyles.infoBox}>
           <View style={localStyles.infoRow}><Text style={localStyles.infoLabel}>{t('fee')}</Text><Text style={[localStyles.infoValue, { color: '#4ade80' }]}>0% {t('included')} ✨</Text></View>
         </View>
         
-        <TouchableOpacity style={[localStyles.swapBtn, (!quote || loading) && { backgroundColor: '#333' }]} disabled={!quote || loading} onPress={handleSwapPress}>
-          <Text style={localStyles.swapBtnText}>{loading ? t('processing') : t('swap_btn')}</Text>
+        <TouchableOpacity style={[globalStyles.primaryButton, (!quote || loading) && { backgroundColor: '#333' }, { marginTop: 24 }]} disabled={!quote || loading} onPress={handleSwapPress}>
+          <Text style={globalStyles.primaryButtonText}>{loading ? t('processing') : t('swap_btn')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-        <View style={localStyles.modalContainer}>
-          <View style={localStyles.modalHeader}><Text style={localStyles.modalTitle}>{t('select')}</Text><TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}><X size={24} color="#fff" /></TouchableOpacity></View>
-          <View style={localStyles.searchBar}><Search size={20} color="#888" style={{ marginRight: 8 }} /><TextInput style={localStyles.searchInput} placeholder="Search tokens..." placeholderTextColor="#888" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" /></View>
-          <FlatList data={filteredTokens} keyExtractor={(item: any) => item.address || item.symbol} renderItem={({ item }: any) => {
-              const bal = item.symbol === 'SOL' ? solBalance : (tokenBalances || {})[item.address] || 0;
-              return (
-                <TouchableOpacity style={localStyles.tokenItem} onPress={() => { modalSide === 'from' ? (setFromToken(item), setAmount(''), setQuote(null)) : setToToken(item); setModalVisible(false); setSearchQuery(''); }}>
-                  <TokenIcon uri={item.logoURI} symbol={item.symbol} mint={item.address} size={40} onBadIcon={(mint) => markBadMint(mint)} />
-                  <View style={localStyles.tokenInfo}><Text style={localStyles.tokenSymbolLarge}>{item.symbol}</Text><Text style={localStyles.tokenName} numberOfLines={1}>{item.name}</Text></View>
-                  {Number(bal) > 0 && <View style={localStyles.tokenBalanceContainer}><Text style={localStyles.tokenBalanceText}>{Number(bal).toLocaleString(undefined, { maximumFractionDigits: 4 })}</Text></View>}
-                </TouchableOpacity>
-              );
-            }} />
+        <View style={globalStyles.modalOverlay}>
+          <View style={[globalStyles.modalContent, { flex: 1, padding: 0 }]}>
+            <View style={localStyles.modalHeader}><Text style={globalStyles.modalTitle}>{t('select')}</Text><TouchableOpacity onPress={() => { setModalVisible(false); setSearchQuery(''); }}><X size={24} color="#fff" /></TouchableOpacity></View>
+            <View style={localStyles.searchBar}><Search size={20} color="#888" style={{ marginRight: 8 }} /><TextInput style={localStyles.searchInput} placeholder={t('search_tokens') || "Search tokens..."} placeholderTextColor="#888" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" /></View>
+            <FlatList data={filteredTokens} keyExtractor={(item: any) => item.address || item.symbol} renderItem={({ item }: any) => {
+                const bal = item.symbol === 'SOL' ? solBalance : (tokenBalances || {})[item.address] || 0;
+                return (
+                  <TouchableOpacity style={globalStyles.tokenItem} onPress={() => { modalSide === 'from' ? (setFromToken(item), setAmount(''), setQuote(null)) : setToToken(item); setModalVisible(false); setSearchQuery(''); }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TokenIcon uri={item.logoURI} symbol={item.symbol} mint={item.address} size={40} onBadIcon={(mint) => markBadMint(mint)} />
+                      <View style={{ marginLeft: 12 }}>
+                        <Text style={globalStyles.tokenSym}>{item.symbol}</Text>
+                        <Text style={globalStyles.tokenName} numberOfLines={1}>{item.name}</Text>
+                      </View>
+                    </View>
+                    {Number(bal) > 0 && <View><Text style={globalStyles.tokenBal}>{Number(bal).toLocaleString(undefined, { maximumFractionDigits: 4 })}</Text></View>}
+                  </TouchableOpacity>
+                );
+              }} />
+          </View>
         </View>
       </Modal>
+
       <ConfirmModal visible={showConfirm} title={t('confirm_swap_title')} message={`${amount} ${fromToken.symbol} \n⬇️\n ${displayOutAmount} ${toToken.symbol}`} cancelText={t('cancel')} confirmText={t('swap_btn')} onCancel={() => setShowConfirm(false)} onConfirm={() => { setShowConfirm(false); doSwap(); }} />
       <SuccessModal visible={showSuccess} message={t('swap_success_msg')} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
-      {showBanner && <View style={localStyles.bannerContainer}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
+      
+      {showBanner && <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
     </View>
   );
 };
 
 const localStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent', paddingTop: 10 },
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 20 },
-  scrollContent: { paddingHorizontal: 16 },
-  card: { backgroundColor: '#1e1e1e', borderRadius: 16, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: '#333' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  cardLabel: { color: '#aaa', fontSize: 14, fontWeight: '600' },
-  balanceText: { color: '#aaa', fontSize: 12 },
   inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 70 },
-  amountInput: { flex: 1, fontSize: 32, color: '#fff', fontWeight: 'bold', height: '100%', padding: 0 },
   tokenSelectBtn: { backgroundColor: '#333', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 12, minWidth: 140, flexDirection: 'row', alignItems: 'center' },
-  tokenSymbol: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  tokenAddress: { color: '#888', fontSize: 10 },
-  percentRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  percentBtn: { backgroundColor: '#2a2a2a', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#444' },
-  percentText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold' },
   switchContainer: { alignItems: 'center', marginVertical: -20, zIndex: 10 },
   switchBtn: { backgroundColor: '#111', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#a855f7' },
   infoBox: { backgroundColor: '#1a1a1a', borderRadius: 12, padding: 12, marginTop: 16, borderWidth: 1, borderColor: '#333' },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   infoLabel: { color: '#888', fontSize: 13 },
   infoValue: { color: '#e2e8f0', fontSize: 13, fontWeight: '600' },
-  swapBtn: { backgroundColor: '#a855f7', borderRadius: 16, paddingVertical: 18, alignItems: 'center', marginTop: 24 },
-  swapBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  modalContainer: { flex: 1, backgroundColor: '#1a1a1a', paddingTop: 16 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 16 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', marginHorizontal: 16, borderRadius: 12, paddingHorizontal: 12, height: 48, marginBottom: 10 },
   searchInput: { flex: 1, fontSize: 16, color: '#fff', height: '100%' },
-  tokenItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#333' },
-  tokenInfo: { marginLeft: 12, flex: 1 },
-  tokenSymbolLarge: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  tokenName: { fontSize: 14, color: '#888' },
-  tokenBalanceContainer: { alignItems: 'flex-end' },
-  tokenBalanceText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  verifiedBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.15)', marginHorizontal: 16, marginBottom: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(59, 130, 246, 0.3)' },
-  verifiedText: { color: '#60a5fa', fontSize: 12, fontWeight: '600', flex: 1 },
-  bannerContainer: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'flex-end', paddingTop: 8, backgroundColor: 'transparent' },
 });

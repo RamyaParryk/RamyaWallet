@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { ArrowLeft, X } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 import { styles } from '../styles/globalStyles';
-// ★ モーダルをインポート
 import { SimpleAlertModal } from '../components/ActionModals';
 
 // --- ロック解除画面 ---

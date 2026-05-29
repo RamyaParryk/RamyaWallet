@@ -10,6 +10,8 @@ import { VersionedTransaction, Keypair } from '@solana/web3.js';
 
 import { SeedVault } from '@solana-mobile/seed-vault-lib';
 import { useConnectionStore } from './connectionStore';
+// 🌟 完成したラッパーをインポート
+import { signWithSeedVault, signMessageWithSeedVault } from '../utils/solanaUtils';
 
 export const WALLETCONNECT_PROJECT_ID = REOWN || ''; 
 
@@ -125,9 +127,8 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
         try { msgBytes = bs58.decode(msgString); } catch { msgBytes = Buffer.from(msgString, 'utf8'); }
         
         if (wallet.walletType === 'seed-vault') {
-          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
-          const signatures = await SeedVault.signMessages(wallet.authToken, [derivationPath], [msgBytes]);
-          const signatureBytes = new Uint8Array(signatures[0]);
+          // 🌟 ラッパーを使用
+          const signatureBytes = await signMessageWithSeedVault(msgBytes, wallet);
           result = { signature: bs58.encode(signatureBytes) };
         } else {
           if (!wallet.secretKey) throw new Error("Secret key is missing");
@@ -141,9 +142,8 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
         try { txBytes = bs58.decode(txString); } catch { txBytes = Buffer.from(txString, 'base64'); }
 
         if (wallet.walletType === 'seed-vault') {
-          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
-          const signedPayloads = await SeedVault.signTransactions(wallet.authToken, [derivationPath], [txBytes]);
-          const signedTxBytes = new Uint8Array(signedPayloads[0]);
+          // 🌟 旧コードを削除し、ラッパーを使用
+          const signedTxBytes = await signWithSeedVault(txBytes, wallet);
           result = { signature: bs58.encode(signedTxBytes) };
         } else {
           if (!wallet.secretKey) throw new Error("Secret key is missing");
@@ -162,9 +162,8 @@ export const useWalletConnectStore = create<WalletConnectState>((set, get) => ({
 
         let txid = '';
         if (wallet.walletType === 'seed-vault') {
-          const derivationPath = wallet.derivationPath || "m/44'/501'/0'/0'";
-          const signedPayloads = await SeedVault.signTransactions(wallet.authToken, [derivationPath], [txBytes]);
-          const signedTxBytes = new Uint8Array(signedPayloads[0]);
+          // 🌟 旧コードを削除し、ラッパーを使用
+          const signedTxBytes = await signWithSeedVault(txBytes, wallet);
           txid = await connection.sendRawTransaction(signedTxBytes, { skipPreflight: true });
         } else {
           if (!wallet.secretKey) throw new Error("Secret key is missing");

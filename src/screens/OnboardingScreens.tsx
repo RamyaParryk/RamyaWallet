@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TouchableOpacity, ActivityIndicator, Image, 
-  TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert, NativeModules
+  TextInput, ScrollView, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { Zap, Download, ShieldCheck } from 'lucide-react-native';
 import { validateMnemonic } from 'bip39';
@@ -26,15 +26,13 @@ export const WelcomeScreen = ({ t, onStart, onImport, onStartSeedVault }: any) =
   useEffect(() => {
     const checkDevice = async () => {
       try {
-        // OSがAndroidの場合のみ、裏でこっそりチェックする
         if (Platform.OS === 'android') {
           const available = await SeedVault.isSeedVaultAvailable(false);
-          setHasSeedVault(available); // trueならボタン表示、falseなら非表示
+          setHasSeedVault(available); 
         } else {
-          setHasSeedVault(false); // iOSなら問答無用で非表示
+          setHasSeedVault(false); 
         }
       } catch (e) {
-        // もしチェック中にエラーが起きても、Alertは出さずにただ「ボタンを隠す(false)」だけにする
         setHasSeedVault(false);
       }
     };
@@ -47,11 +45,9 @@ export const WelcomeScreen = ({ t, onStart, onImport, onStartSeedVault }: any) =
       <Text style={styles.title}>{t('welcome_title')}</Text>
       <Text style={styles.subtitle}>{t('welcome_subtitle')}</Text>
       
-      {/* Seed Vault対応端末の場合のみ表示される特別ボタン */}
       {hasSeedVault && (
         <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#22c55e', marginBottom: 16 }]} onPress={onStartSeedVault}>
           <ShieldCheck size={20} color="#fff" style={{marginRight: 8}} />
-          {/* ★ 修正: ベタ打ちを削除し、用意された翻訳キーを呼び出す */}
           <Text style={styles.primaryButtonText}>{t('connect_seed_vault')}</Text>
         </TouchableOpacity>
       )}

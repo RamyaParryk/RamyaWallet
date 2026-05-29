@@ -1,0 +1,21 @@
+diff --git a/node_modules/react-native-hce/android/build.gradle b/node_modules/react-native-hce/android/build.gradle
+index 25c6ac4..379d901 100644
+--- a/node_modules/react-native-hce/android/build.gradle
++++ b/node_modules/react-native-hce/android/build.gradle
+@@ -4,7 +4,7 @@ buildscript {
+ 
+   repositories {
+     google()
+-    jcenter()
++    mavenCentral()
+   }
+ 
+   dependencies {
+@@ -52,7 +52,6 @@ android {
+ 
+ repositories {
+   mavenCentral()
+-  jcenter()
+   google()
+ 
+   def found = false

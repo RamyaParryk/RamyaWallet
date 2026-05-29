@@ -18,15 +18,12 @@ export const WalletConnectModals = () => {
   } = useWalletConnectStore();
   
   const wallet = useWalletStore(s => s.wallet);
-  
   const lang = useSettingsStore(s => s.lang);
   const t = useTranslation(lang);
-
   const proposal = pendingSessionProposals[0];
   const request = pendingRequests[0];
 
   if (!wallet) return null;
-
   return (
     <>
       {/* 1. 接続許可 (Session Proposal) のモーダル */}

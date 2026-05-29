@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 (global as any).Buffer = Buffer;
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator, ImageBackground, DeviceEventEmitter, StyleSheet, Alert, PermissionsAndroid } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, BackHandler, ActivityIndicator, ImageBackground, DeviceEventEmitter, StyleSheet, Alert, PermissionsAndroid, LayoutAnimation, UIManager, Platform } from 'react-native';
 import { Wallet, RefreshCw, Settings, History } from 'lucide-react-native';
 
 import { Keypair, PublicKey } from '@solana/web3.js';
@@ -14,6 +14,10 @@ import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { SeedVault } from '@solana-mobile/seed-vault-lib';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import mobileAds from 'react-native-google-mobile-ads';
+import NfcManager from 'react-native-nfc-manager';
+import { HCESession, NFCTagType4, NFCTagType4NDEFContentType } from 'react-native-hce';
 
 import { useTranslation } from './src/constants/translations';
 import { styles } from './src/styles/globalStyles';
@@ -27,6 +31,7 @@ import { SwapScreen } from './src/screens/SwapScreen';
 import { ReceiveScreen, SendScreen } from './src/screens/TransferScreens';
 import { StakingScreen } from './src/screens/StakingScreen';
 import { AddressBookScreen } from './src/screens/AddressBookScreen';
+import { AssetDetailScreen } from './src/screens/AssetDetailScreen';
 
 import { wait } from './src/utils/solanaUtils';
 import {
@@ -46,7 +51,7 @@ import {
 } from './src/screens/SettingsDetailScreens';
 
 import { ConfirmModal } from './src/components/ActionModals';
-import mobileAds from 'react-native-google-mobile-ads';
+import { WalletConnectModals } from './src/components/WalletConnectModals';
 
 import { useUIStore } from './src/state/uiStore';
 import { useSettingsStore } from './src/state/settingsStore';
@@ -54,22 +59,16 @@ import { useWalletStore, WalletData } from './src/state/walletStore';
 import { useAssetStore } from './src/state/assetStore';
 import { useContactsStore } from './src/state/contactsStore';
 import { useConnectionStore } from './src/state/connectionStore';
-
 import { useWalletConnectStore } from './src/state/walletConnectStore';
-import { WalletConnectModals } from './src/components/WalletConnectModals';
 
 import { loadTokenListFast, refreshTokenListInBackground } from './src/services/tokenListCache';
 import * as secureStorage from './src/storage/secureStorage';
 import { refreshAssetsService } from './src/services/refreshAssets';
 import { warmupNetwork } from './src/services/jupiterService';
 
-import { LayoutAnimation, UIManager, Platform, NativeModules } from 'react-native';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-import { AssetDetailScreen } from './src/screens/AssetDetailScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getDeviceLanguage = () => {
   try {
@@ -231,6 +230,23 @@ export default function App() {
     const initializeApp = async () => {
       await wait(400);
       try {
+            await NfcManager.start();
+          } catch (e) {
+            console.log('NfcManager start error:', e);
+          }
+      try {
+        const session = await HCESession.getInstance();
+        const dummyTag = new NFCTagType4({
+          type: NFCTagType4NDEFContentType.URL, 
+          content: 'https://init',
+          writable: false,
+        });
+        await session.setApplication(dummyTag); 
+        await session.setEnabled(false); 
+      } catch (e) {
+        console.log('HCE Init error:', e);
+      }
+      try {
         const { settings, contacts, language, wallet } = await secureStorage.loadAll();
         if (contacts) setContacts(contacts);
         
@@ -362,189 +378,107 @@ export default function App() {
     } catch (e) { showNotification(t('create_error') || 'Error'); animatedSetScreen('welcome'); }
   }, [animatedSetScreen, setWallet, showNotification, t]);
 
-  const createWalletWithSeedVault = useCallback(async () => {
+const createWalletWithSeedVault = useCallback(async () => {
     const SV: any = SeedVault;
-  
     const toBase58PublicKey = (value: any): string => {
       if (!value) return '';
-  
-      const raw =
-        value.publicKeyEncoded ??
-        value.publicKey ??
-        value.address ??
-        value;
-  
+      const raw = value.publicKeyEncoded ?? value.publicKey ?? value.address ?? value;
       if (typeof raw === 'string') {
-        try {
-          return new PublicKey(raw).toBase58();
-        } catch {
-          return new PublicKey(Buffer.from(raw, 'base64')).toBase58();
-        }
+        try { return new PublicKey(raw).toBase58(); } catch { return new PublicKey(Buffer.from(raw, 'base64')).toBase58(); }
       }
-  
-      if (raw?.buffer) {
-        return new PublicKey(new Uint8Array(raw.buffer)).toBase58();
-      }
-  
-      if (Array.isArray(raw)) {
-        return new PublicKey(new Uint8Array(raw)).toBase58();
-      }
-  
+      if (raw instanceof Uint8Array) return new PublicKey(raw).toBase58();
+      if (raw instanceof ArrayBuffer) return new PublicKey(new Uint8Array(raw)).toBase58();
+      if (Array.isArray(raw)) return new PublicKey(Uint8Array.from(raw)).toBase58();
       if (typeof raw === 'object') {
-        return new PublicKey(new Uint8Array(Object.values(raw))).toBase58();
+        console.error('[SeedVault] Unsupported public key format:', JSON.stringify(raw));
+        throw new Error('Unsupported Seed Vault public key format');
       }
-  
       return '';
     };
-  
     const getAuthToken = (seed: any): number | string | null => {
-      const token =
-        seed?.authToken ??
-        seed?.auth_token ??
-        seed?.authorizationToken ??
-        seed;
-  
-      if (typeof token === 'number' || typeof token === 'string') {
-        return token;
-      }
-  
+      const token = seed?.authToken ?? seed?.auth_token ?? seed?.authorizationToken ?? seed;
+      if (typeof token === 'number' || typeof token === 'string') return token;
       return null;
     };
-  
     try {
       const available = await SeedVault.isSeedVaultAvailable(false);
-      if (!available) {
-        throw new Error('Seed Vault is not available on this device.');
-      }
-  
-      const granted = await PermissionsAndroid.request(
-        'com.solanamobile.seedvault.ACCESS_SEED_VAULT' as any
-      );
-  
+      if (!available) throw new Error('Seed Vault is not available on this device.');
+      const granted = await PermissionsAndroid.request('com.solanamobile.seedvault.ACCESS_SEED_VAULT' as any);
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
         Alert.alert(t('error') || 'Error', t('seed_vault_permission_denied') || 'Seed Vault permission denied.');
         return;
       }
-  
       let authResponse: any = null;
-  
-      // 1. まず既に許可されているシードを探す
       if (typeof SV.getAuthorizedSeeds === 'function') {
         const seeds = await SV.getAuthorizedSeeds();
-        if (seeds && seeds.length > 0) {
-          authResponse = seeds[0];
-        }
+        if (seeds && seeds.length > 0) authResponse = seeds[0];
       }
-  
-      // 2. まだ許可されていなければ、堂々とUIを呼び出してユーザーに指紋認証を求める
       if (!authResponse) {
-        console.log("No authorized seeds found. Prompting UI...");
-        if (typeof SV.authorizeNewSeed === 'function') {
-          authResponse = await SV.authorizeNewSeed();
-        } else if (typeof SV.authorizeSeed === 'function') {
-          authResponse = await SV.authorizeSeed();
-        } else {
-          throw new Error('No method available to trigger Seed Vault authorization UI.');
-        }
+        if (typeof SV.authorizeNewSeed === 'function') authResponse = await SV.authorizeNewSeed();
+        else if (typeof SV.authorizeSeed === 'function') authResponse = await SV.authorizeSeed();
+        else throw new Error('No method available to trigger Seed Vault authorization UI.');
       }
-  
       const authToken = getAuthToken(authResponse);
-  
-      if (authToken === null) {
-        throw new Error('Seed Vault auth token not found: ' + JSON.stringify(authResponse));
-      }
-  
-      await wait(500); // 画面遷移のアニメーション待機
-  
+      if (authToken === null) throw new Error('Seed Vault auth token not found.');
+      await wait(500); 
       let accounts: any[] = [];
-  
-      if (typeof SV.getUserWallets === 'function') {
-        accounts = await SV.getUserWallets(authToken);
+      if (authResponse?.accounts && authResponse.accounts.length > 0) {
+        accounts = authResponse.accounts;
       }
-  
       if (!accounts || accounts.length === 0) {
-        if (typeof SV.getPublicKeys === 'function') {
-          const candidates = [
-            "m/44'/501'/0'",
-            "m/44'/501'/0'/0'",
-            "m/44'/501'/1'",
-            "m/44'/501'/1'/0'",
-          ];
-  
-          const publicKeys = await SV.getPublicKeys(authToken, candidates);
-          accounts = publicKeys.map((p: any, index: number) => ({
-            ...p,
-            derivationPath: p.resolvedDerivationPath ?? candidates[index],
-          }));
+        if (typeof SV.getUserWallets === 'function') {
+          try { accounts = await SV.getUserWallets(authToken.toString()); } catch(e){}
         }
       }
-  
-      // 万が一上記のAPIがダメだった場合の最強総当たりロジック
       if (!accounts || accounts.length === 0) {
-        const tries = [
-          ['', ''],
-          ['public_key_encoded', ''],
-          ['purpose', '44'],
-          ['coin_type', '501'],
-          ['coinType', '501'],
-        ];
-        for (const [column, value] of tries) {
-          try {
-            const accs = await SV.getAccounts(authToken, column, value);
-            if (accs?.length) {
-              accounts = accs;
-              break;
-            }
-          } catch (e) { /* ignore SQL errors */ }
+        if (typeof SV.getAccounts === 'function') {
+          try { accounts = await SV.getAccounts(authToken.toString(), '', ''); } catch(e){}
         }
       }
-
       if (!accounts || accounts.length === 0) {
-        throw new Error('No Seed Vault wallet accounts found. All methods failed.');
+        throw new Error('No Seed Vault wallet accounts found. Could not retrieve account list.');
       }
-  
       const account = accounts[0];
+      console.log('[SeedVault] Raw account from Seed Vault:', JSON.stringify(account));
+  
       const publicKeyStr = toBase58PublicKey(account);
-  
-      if (!publicKeyStr) {
-        throw new Error('Could not parse Seed Vault public key.');
+      if (!publicKeyStr) throw new Error('Could not parse Seed Vault public key from account.');
+
+      let dPath = account.derivation_path ?? account.derivationPath ?? account.resolvedDerivationPath;
+
+      if (!dPath) {
+        const purpose = account.purpose ?? 44;
+        const coinType = account.coin_type ?? account.coinType ?? 501;
+        const accIndex = account.account ?? 0;
+        const role = account.role;
+        if (role !== undefined) {
+           dPath = `bip32:/m/${purpose}'/${coinType}'/${accIndex}'/${role}'`;
+        } else {
+           dPath = `bip32:/m/${purpose}'/${coinType}'/${accIndex}'`;
+        }
+      } else {
+        if (dPath.startsWith("m/")) dPath = `bip32:/${dPath}`;
+        else if (dPath.startsWith("bip44:")) dPath = dPath.replace("bip44:", "bip32:/m/44'/");
       }
-  
+      console.log(`[SeedVault] Created Wallet: ${publicKeyStr} with Exact Path: ${dPath}`);
       const newWallet: WalletData = {
         address: publicKeyStr,
         walletType: 'seed-vault',
-        authToken,
-        derivationPath:
-          account.derivationPath ??
-          account.resolvedDerivationPath ??
-          "m/44'/501'/0'",
+        authToken: authToken.toString(),
+        derivationPath: dPath, 
       };
-  
       setWallet(newWallet as any);
       await persistWallet(newWallet);
-      await persistSettings({
-        pin: null,
-        biometricsEnabled: true,
-        network: 'mainnet-beta',
-      });
-  
+      await persistSettings({ pin: null, biometricsEnabled: true, network: 'mainnet-beta' });
       setBootSyncDone(false);
       bootSyncStartedRef.current = false;
       animatedSetScreen('main');
       showNotification(t('seed_vault_connected') || 'Seed Vault connected 🛡️');
-  
     } catch (e: any) {
       console.log('Seed Vault Error:', e);
       Alert.alert(t('error') || 'Error', e?.message || String(e));
     }
-  }, [
-    animatedSetScreen,
-    setWallet,
-    persistWallet,
-    persistSettings,
-    showNotification,
-    t,
-  ]);
+  }, [animatedSetScreen, setWallet, persistWallet, persistSettings, showNotification, t]);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -599,7 +533,7 @@ export default function App() {
       case 'address_book': return <AddressBookScreen t={t} contacts={contacts} onSave={saveContacts} notify={showNotification} onBack={() => animatedSetScreen('main')} />;
       case 'settings_help': return <HelpScreen t={t} onBack={() => animatedSetScreen('main')} />;
       case 'settings_about': return <AboutScreen t={t} onBack={() => animatedSetScreen('main')} />;
-      case 'settings_lang': return <LanguageScreen onBack={() => animatedSetScreen('main')} onChange={changeLanguage} currentLang={lang} />;
+      case 'settings_lang': return <LanguageScreen t={t} onBack={() => animatedSetScreen('main')} onChange={changeLanguage} currentLang={lang} />;
       case 'pin_setup': return <PinSetupScreen t={t} onSuccess={handlePinSet} onCancel={() => { setPendingBioEnable(false); animatedSetScreen('settings_security'); }} />;
       case 'settings_network': return <NetworkSettingsScreen t={t} currentNetwork={network} setNetwork={async (net: any) => { setNetwork(net); await persistSettings({ network: net }); }} currentRpc={rpcEndpoint} setRpc={setRpcEndpoint} onBack={() => animatedSetScreen('main')} />;
       
