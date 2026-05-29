@@ -92,7 +92,7 @@ ja: {
     official_youtube: "公式YouTube",
     terms: "利用規約",
     terms_desc: "タップして確認",
-    terms_title: "利用規約・プライバシーポリシー",
+    terms_title: "利用規約",
     term_1_title: "1. はじめに",
     term_1_desc: "本アプリ「Ramya Wallet」（以下、本アプリ）は、ユーザーが自身の責任において暗号資産（仮想通貨）を管理するための非管理型（ノンカストディアル）ウォレットツールです。",
     term_2_title: "2. 資産の管理責任",

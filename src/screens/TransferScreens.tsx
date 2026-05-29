@@ -386,7 +386,7 @@ export const SendScreen = ({ t, wallet, connection, contacts, onBack, notify, pr
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleUniversalScan} />
+      {isScanning && <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleUniversalScan} />}
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, visible: false })} />
       <SuccessModal visible={showSuccess} message={t('send_success') || '送信完了'} onDone={() => { setShowSuccess(false); onBack(); }} />
     </View>

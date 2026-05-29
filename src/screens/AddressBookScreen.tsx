@@ -151,7 +151,7 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
         </KeyboardAvoidingView>
       )}
 
-      <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />
+      {isScanning && <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />}
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, visible: false })} />
       <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={t('delete') || 'Delete'} cancelText={t('cancel') || 'Cancel'} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
       

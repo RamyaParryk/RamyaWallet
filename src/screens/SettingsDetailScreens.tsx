@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, StyleSheet, Platform } from 'react-native';
-import { Lock, Check, Github, Info, AlertCircle, Globe, Server, ArrowUpRight, ShieldCheck, ChevronRight, FileText, Youtube } from 'lucide-react-native';
+import { Lock, Check, Github, Info, AlertCircle, Globe, Server, ArrowUpRight, ShieldCheck, ChevronRight, FileText } from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
-
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
-import { GITHUB_URL } from '../constants/config';
+import { GITHUB_URL, PRIVACY_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { ConfirmModal } from '../components/ActionModals';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+const BANNER_ESTIMATED_HEIGHT = 60;
 
 const SettingItemRow = ({ icon: Icon, title, desc, onPress, rightElement, isLast, color="rgba(168, 85, 247, 0.1)", iconColor="#a855f7" }: any) => (
   <TouchableOpacity style={[localStyles.settingItem, !isLast && localStyles.borderBottom]} onPress={onPress} disabled={!onPress}>
@@ -25,11 +27,22 @@ const SettingItemRow = ({ icon: Icon, title, desc, onPress, rightElement, isLast
   </TouchableOpacity>
 );
 
+const FixedBannerAd = () => {
+  const insets = useSafeAreaInsets();
+  const adUnitId = useMemo(() => (Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : ''), []);
+  if (!adUnitId) return null;
+
+  return (
+    <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}>
+      <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+    </View>
+  );
+};
+
 // --- 1. Security Settings ---
 export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack }: any) => {
   const [showKey, setShowKey] = useState(false);
   const [keyConfirm, setKeyConfirm] = useState(false);
-  const insets = useSafeAreaInsets();
 
   const handleReveal = async () => {
     if (biometrics) {
@@ -44,8 +57,7 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('security') || 'Security'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
         <Text style={globalStyles.sectionTitle}>{t('security') || 'Security'}</Text>
         <View style={globalStyles.card}>
           <SettingItemRow 
@@ -88,6 +100,7 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
         )}
       </ScrollView>
       <ConfirmModal visible={keyConfirm} title={t('danger_zone') || 'Danger Zone'} message={t('secret_phrase_desc') || 'Are you sure?'} confirmText={t('show') || 'Show'} cancelText={t('cancel') || 'Cancel'} onConfirm={() => { setKeyConfirm(false); handleReveal(); }} onCancel={() => setKeyConfirm(false)} />
+      <FixedBannerAd />
     </View>
   );
 };
@@ -97,20 +110,20 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, onBack }:
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('network') || 'Network'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 20 }}>
         <Text style={globalStyles.sectionTitle}>{t('environment') || 'Environment'}</Text>
         <View style={globalStyles.card}>
           <SettingItemRow icon={Globe} title="Mainnet Beta" desc="Production Network" onPress={() => setNetwork('mainnet-beta')} rightElement={currentNetwork === 'mainnet-beta' && <Check color="#22c55e" />} />
           <SettingItemRow icon={Server} title="Devnet" desc="Development Network" isLast onPress={() => setNetwork('devnet')} rightElement={currentNetwork === 'devnet' && <Check color="#22c55e" />} />
         </View>
       </ScrollView>
+      <FixedBannerAd />
     </View>
   );
 };
 
 // --- 3. Help Screen ---
 export const HelpScreen = ({ t, onBack }: any) => {
-  // 🌟 翻訳ファイルにある6つのFAQを完全連携！
   const faqs = [
     { q: t('faq_restore') || 'How to restore?', a: t('faq_restore_desc') },
     { q: t('faq_stake') || 'What is Staking?', a: t('faq_stake_desc') },
@@ -122,7 +135,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('help') || 'Help & FAQ'} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
         <Text style={globalStyles.sectionTitle}>FAQ</Text>
         {faqs.map((faq, i) => (
           <View key={i} style={globalStyles.helpItemContainer}>
@@ -134,6 +147,7 @@ export const HelpScreen = ({ t, onBack }: any) => {
           </View>
         ))}
       </ScrollView>
+      <FixedBannerAd />
     </View>
   );
 };
@@ -143,24 +157,28 @@ export const AboutScreen = ({ t, onBack }: any) => {
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('about') || 'About App'} onBack={onBack} />
-      
-      <View style={{ alignItems: 'center', marginTop: 30 }}>
-        <View style={localStyles.logoContainer}>
-          <Image source={require('../../assets/icon.png')} style={localStyles.appIcon} />
+      <ScrollView contentContainerStyle={{ paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
+        <View style={{ alignItems: 'center', marginTop: 30 }}>
+          <View style={localStyles.logoContainer}>
+            <Image source={require('../../assets/icon.png')} style={localStyles.appIcon} />
+          </View>
+          <Text style={localStyles.appName}>Ramya Wallet</Text>
+          <Text style={localStyles.appVersion}>Version {packageJson.version}</Text>
         </View>
-        <Text style={localStyles.appName}>Ramya Wallet</Text>
-        <Text style={localStyles.appVersion}>Version {packageJson.version}</Text>
-      </View>
 
-      <View style={{ paddingHorizontal: 16, marginTop: 30 }}>
-        <Text style={globalStyles.sectionTitle}>{t('support') || "Support"}</Text>
-        <View style={globalStyles.card}>
-          {/* 🌟 翻訳ファイルのキーに合わせてリンク類を更新 */}
-          <SettingItemRow icon={Github} title="GitHub" desc="Source code" onPress={() => Linking.openURL(GITHUB_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
-          <SettingItemRow icon={Youtube} title={t('official_youtube') || "Official YouTube"} desc="Ramya Wallet Channel" onPress={() => Linking.openURL('https://youtube.com/')} rightElement={<ArrowUpRight size={20} color="#888" />} />
-          <SettingItemRow icon={FileText} title={t('terms_title') || "Terms & Privacy Policy"} desc={t('terms_desc') || "Tap to view"} isLast onPress={() => Linking.openURL('https://ramyawallet.com/privacy')} rightElement={<ArrowUpRight size={20} color="#888" />} />
+        <View style={{ paddingHorizontal: 16, marginTop: 30 }}>
+          <Text style={globalStyles.sectionTitle}>{t('support') || "Support"}</Text>
+          <View style={globalStyles.card}>
+            <SettingItemRow icon={Github} title="GitHub" desc="Source code" onPress={() => Linking.openURL(GITHUB_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
+            <SettingItemRow icon={FileText} title={t('terms_title') || "Terms & Privacy Policy"} desc={t('terms_desc') || "Tap to view"} isLast onPress={() => Linking.openURL(PRIVACY_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
+          </View>
+          
+          <Text style={{textAlign:'center', color:'#555', marginTop:40, fontSize: 12}}>
+            Made with ❤️ for the Solana Community
+          </Text>
         </View>
-      </View>
+      </ScrollView>
+      <FixedBannerAd />
     </View>
   );
 };
@@ -190,7 +208,7 @@ export const LanguageScreen = ({ t, onBack, onChange, currentLang }: any) => {
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('language') || "Language"} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
         <View style={globalStyles.card}>
           {langs.map((l, i) => (
             <SettingItemRow 
@@ -201,6 +219,7 @@ export const LanguageScreen = ({ t, onBack, onChange, currentLang }: any) => {
           ))}
         </View>
       </ScrollView>
+      <FixedBannerAd />
     </View>
   );
 };
@@ -217,7 +236,6 @@ const localStyles = StyleSheet.create({
   secretHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   secretTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   secretData: { color: '#ef4444', fontFamily: 'monospace', fontSize: 14, lineHeight: 22, backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
-  
   logoContainer: { width: 100, height: 100, borderRadius: 24, backgroundColor: '#a855f7', justifyContent: 'center', alignItems: 'center', marginBottom: 16, shadowColor: '#a855f7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   appIcon: { width: 75, height: 75, resizeMode: 'contain' },
   appName: { color: '#fff', fontSize: 24, fontWeight: 'bold' },

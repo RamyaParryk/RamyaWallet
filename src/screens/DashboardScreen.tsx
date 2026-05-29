@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Image, Dimensions } from 'react-native';
 import { Copy, ArrowDownLeft, Send, CreditCard, TrendingUp, Image as ImageIcon, QrCode, RefreshCw } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-
 import { useWalletConnectStore } from '../state/walletConnectStore';
 import { styles as globalStyles } from '../styles/globalStyles';
 import { shortenAddress } from '../utils/solanaUtils';
@@ -20,13 +19,19 @@ const ActionButton = ({ icon: Icon, label, onPress, color = '#1a1a1a' }: any) =>
   </TouchableOpacity>
 );
 
-// 🌟 onRefresh を受け取る
 export const DashboardScreen = ({ t, onNavigate, wallet, assets, totalValue, onRefresh }: any) => {
   const [isScanning, setIsScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
   
-  const tokens = assets.filter((a: any) => a.decimals > 0 && a.amount > 0);
-  const nfts = assets.filter((a: any) => a.decimals === 0 && a.amount > 0);
+  // 通常のトークンだけでなく、ステーキングアセット(native-stake, staked-skr)も資産に含める
+  const tokens = assets.filter((a: any) => 
+    (a.decimals > 0 || a.mint === 'native-stake' || a.mint === 'staked-skr') && a.amount > 0
+  );
+  
+  // NFT側からステーキングアセットを完全に除外する
+  const nfts = assets.filter((a: any) => 
+    a.decimals === 0 && a.mint !== 'native-stake' && a.mint !== 'staked-skr' && a.amount > 0
+  );
 
   const handleCopy = () => {
     if (wallet?.address) Clipboard.setString(wallet.address);
@@ -53,7 +58,6 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets, totalValue, onR
             <Copy size={14} color="#888" />
           </TouchableOpacity>
           
-          {/* 🌟 更新ボタンとQRスキャンボタンを横並びに配置 */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <TouchableOpacity onPress={onRefresh}>
               <RefreshCw size={24} color="#fff" />
@@ -141,7 +145,7 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets, totalValue, onR
         )}
 
       </ScrollView>
-      <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />
+      {isScanning && <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />}
     </View>
   );
 };

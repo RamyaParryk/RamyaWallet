@@ -2,7 +2,7 @@
 import { StyleSheet, Platform } from 'react-native';
 
 export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   centerContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   content: { flex: 1, padding: 20 },
   scrollContent: { paddingBottom: 100 },
