@@ -19,9 +19,20 @@ export const UnlockScreen = ({ t, correctPin, biometricsEnabled, onUnlock, onLog
 
   const checkBiometrics = async () => {
     try {
-      const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('welcome_back') || 'Welcome Back' });
+      // 🌟 修正：センサーが有効か先にチェックし、エラー発生を防ぐ
+      const { available } = await rnBiometrics.isSensorAvailable();
+      if (!available) return;
+
+      // 🌟 修正：翻訳テキストがない場合のフォールバック文字列を追加
+      const { success } = await rnBiometrics.simplePrompt({ 
+        promptMessage: t('welcome_back') || 'Welcome Back' 
+      });
+      
       if (success) onUnlock();
-    } catch(e) {}
+    } catch (e) {
+      // 🌟 修正：エラーの握りつぶしをやめ、コンソールに出力する
+      console.log('Biometrics error:', e);
+    }
   };
 
   const handlePress = (num: string) => {

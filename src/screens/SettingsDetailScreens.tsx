@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, StyleSheet, Platform } from 'react-native';
-import { Lock, Check, Github, Info, AlertCircle, Globe, Server, ArrowUpRight, ShieldCheck, ChevronRight, FileText } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Image, Linking, StyleSheet, Platform, Modal, Alert } from 'react-native';
+import { 
+  Lock, Check, Github, Info, AlertCircle, Globe, Server, Download, ShieldCheck, ChevronRight, X,
+  Key, TrendingUp, Percent, CreditCard, Smartphone, Landmark, Coins, Send, Image as ImageIcon, Flame, RefreshCw
+} from 'lucide-react-native';
 import ReactNativeBiometrics from 'react-native-biometrics';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles as globalStyles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
-import { GITHUB_URL, PRIVACY_URL } from '../constants/config';
+import { GITHUB_URL } from '../constants/config';
 import { secretKeyToString } from '../utils/solanaUtils';
 import packageJson from '../../package.json';
 import { ConfirmModal } from '../components/ActionModals';
@@ -44,6 +47,39 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
   const [showKey, setShowKey] = useState(false);
   const [keyConfirm, setKeyConfirm] = useState(false);
 
+  // 🌟 指紋認証のトグルを安全かつ確実に処理する
+  const handleBiometricsToggle = async (newValue: boolean) => {
+    if (newValue) {
+      if (!hasPin) {
+        Alert.alert(
+          t('error') || 'エラー', 
+          t('pin_required_for_biometrics') || '生体認証を有効にするには、まずPINを設定してください。'
+        );
+        onSetupPin();
+        return;
+      }
+      
+      try {
+        const rnBiometrics = new ReactNativeBiometrics();
+        const { available } = await rnBiometrics.isSensorAvailable();
+        
+        if (!available) {
+          Alert.alert(t('error') || 'エラー', 'この端末では生体認証が利用できないか、登録されていません。');
+          return;
+        }
+
+        const { success } = await rnBiometrics.simplePrompt({ promptMessage: t('use_biometrics') || '生体認証を有効にします' });
+        if (success) {
+          setBiometrics(true);
+        }
+      } catch (e) {
+        console.log('Biometrics setup error:', e);
+      }
+    } else {
+      setBiometrics(false);
+    }
+  };
+
   const handleReveal = async () => {
     if (biometrics) {
       const rnBiometrics = new ReactNativeBiometrics();
@@ -70,7 +106,7 @@ export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, h
           />
           <SettingItemRow 
             icon={ShieldCheck} title={t('biometrics') || 'Biometrics'} desc={t('use_biometrics') || 'Use Biometrics'} isLast
-            rightElement={<Switch value={biometrics} onValueChange={setBiometrics} trackColor={{ true: '#a855f7', false: '#333' }} />} 
+            rightElement={<Switch value={biometrics} onValueChange={handleBiometricsToggle} trackColor={{ true: '#a855f7', false: '#333' }} />} 
           />
         </View>
 
@@ -125,27 +161,44 @@ export const NetworkSettingsScreen = ({ t, currentNetwork, setNetwork, onBack }:
 // --- 3. Help Screen ---
 export const HelpScreen = ({ t, onBack }: any) => {
   const faqs = [
-    { q: t('faq_restore') || 'How to restore?', a: t('faq_restore_desc') },
-    { q: t('faq_stake') || 'What is Staking?', a: t('faq_stake_desc') },
-    { q: t('faq_apy') || 'What is the APY?', a: t('faq_apy_desc') },
-    { q: t('faq_fee') || 'Any fees?', a: t('faq_fee_desc') },
-    { q: t('faq_device') || 'Changing device?', a: t('faq_device_desc') },
-    { q: t('faq_bank') || 'Difference from bank?', a: t('faq_bank_desc') },
+    { q: t('faq_restore') || 'ウォレットの復元方法は？', a: t('faq_restore_desc'), icon: Key, color: '#a855f7' },
+    { q: t('faq_stake') || 'ステーキングとは？', a: t('faq_stake_desc'), icon: TrendingUp, color: '#3b82f6' },
+    { q: t('faq_apy') || '利率（APY）はどれくらい？', a: t('faq_apy_desc'), icon: Percent, color: '#22c55e' },
+    { q: t('faq_fee') || '手数料はかかりますか？', a: t('faq_fee_desc'), icon: CreditCard, color: '#f59e0b' },
+    { q: t('faq_device') || '機種変更時の注意点は？', a: t('faq_device_desc'), icon: Smartphone, color: '#ec4899' },
+    { q: t('faq_bank') || '銀行とは何が違うのですか？', a: t('faq_bank_desc'), icon: Landmark, color: '#0ea5e9' },
+    { q: t('help_faq_staking_title') || 'Q. 一部のステーキングしたトークンが表示されません', a: t('help_faq_staking_answer'), icon: Coins, color: '#ef4444' },
+    { q: t('faq_nft_send_title') || 'Q. NFTはどうやって送るの？', a: t('faq_nft_send_desc'), icon: Send, color: '#10b981' },
+    { q: t('faq_nft_bg_title') || 'Q. NFTをアプリの背景にできますか？', a: t('faq_nft_bg_desc'), icon: ImageIcon, color: '#6366f1' },
+    { q: t('faq_nft_burn_title') || 'Q. スパムNFTを消すことはできますか？', a: t('faq_nft_burn_desc'), icon: Flame, color: '#f43f5e' },
+    { q: t('faq_nfc_compat') || 'Q. 他のウォレットアプリとも通信できますか？', a: t('faq_nfc_compat_desc'), icon: Smartphone, color: '#3b82f6' },
+    { q: t('faq_nfc_receive') || 'Q. 受け取る側の操作は？', a: t('faq_nfc_receive_desc'), icon: Download, color: '#22c55e' },
+    { q: t('faq_nfc_amount') || 'Q. 金額を指定して受け取れますか？', a: t('faq_nfc_amount_desc'), icon: Coins, color: '#f59e0b' },
+    { q: t('faq_nfc_send') || 'Q. 送る側の操作は？', a: t('faq_nfc_send_desc'), icon: Send, color: '#a855f7' },
+    { q: t('faq_nfc_retry') || 'Q. タッチして失敗する場合は？', a: t('faq_nfc_retry_desc'), icon: RefreshCw, color: '#ec4899' },
+    { q: t('faq_nfc_no_reaction') || 'Q. かざしても全く反応しません', a: t('faq_nfc_no_reaction_desc'), icon: AlertCircle, color: '#ef4444' },
+    { q: t('faq_nfc_conflict') || 'Q. 他の決済アプリが起動してしまいます', a: t('faq_nfc_conflict_desc'), icon: ShieldCheck, color: '#6366f1' },
   ];
+
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('help') || 'Help & FAQ'} onBack={onBack} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
         <Text style={globalStyles.sectionTitle}>FAQ</Text>
-        {faqs.map((faq, i) => (
-          <View key={i} style={globalStyles.helpItemContainer}>
-            <View style={globalStyles.helpHeaderRow}>
-              <View style={globalStyles.helpIconBadge}><Info size={16} color="#fff" /></View>
-              <Text style={globalStyles.helpTitle}>{faq.q}</Text>
+        {faqs.map((faq, i) => {
+          const IconComponent = faq.icon;
+          return (
+            <View key={i} style={globalStyles.helpItemContainer}>
+              <View style={globalStyles.helpHeaderRow}>
+                <View style={[globalStyles.helpIconBadge, { backgroundColor: faq.color }]}>
+                  <IconComponent size={16} color="#fff" />
+                </View>
+                <Text style={globalStyles.helpTitle}>{faq.q}</Text>
+              </View>
+              <Text style={globalStyles.helpDesc}>{faq.a}</Text>
             </View>
-            <Text style={globalStyles.helpDesc}>{faq.a}</Text>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
       <FixedBannerAd />
     </View>
@@ -154,6 +207,8 @@ export const HelpScreen = ({ t, onBack }: any) => {
 
 // --- 4. About Screen ---
 export const AboutScreen = ({ t, onBack }: any) => {
+  const [showTerms, setShowTerms] = useState(false);
+
   return (
     <View style={globalStyles.container}>
       <HeaderRow title={t('about') || 'About App'} onBack={onBack} />
@@ -166,11 +221,22 @@ export const AboutScreen = ({ t, onBack }: any) => {
           <Text style={localStyles.appVersion}>Version {packageJson.version}</Text>
         </View>
 
-        <View style={{ paddingHorizontal: 16, marginTop: 30 }}>
-          <Text style={globalStyles.sectionTitle}>{t('support') || "Support"}</Text>
+        <View style={{ paddingHorizontal: 16, marginTop: 40 }}>
+          <Text style={globalStyles.sectionTitle}>LINKS & INFO</Text>
           <View style={globalStyles.card}>
-            <SettingItemRow icon={Github} title="GitHub" desc="Source code" onPress={() => Linking.openURL(GITHUB_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
-            <SettingItemRow icon={FileText} title={t('terms_title') || "Terms & Privacy Policy"} desc={t('terms_desc') || "Tap to view"} isLast onPress={() => Linking.openURL(PRIVACY_URL)} rightElement={<ArrowUpRight size={20} color="#888" />} />
+            <SettingItemRow 
+              icon={Github} 
+              title="Official GitHub" 
+              desc="Open Source" 
+              onPress={() => Linking.openURL(GITHUB_URL)} 
+            />
+            <SettingItemRow 
+              icon={Info} 
+              title={t('terms_title') || "利用規約"} 
+              desc={t('terms_desc') || "タップして確認"} 
+              isLast 
+              onPress={() => setShowTerms(true)} 
+            />
           </View>
           
           <Text style={{textAlign:'center', color:'#555', marginTop:40, fontSize: 12}}>
@@ -179,6 +245,32 @@ export const AboutScreen = ({ t, onBack }: any) => {
         </View>
       </ScrollView>
       <FixedBannerAd />
+
+      <Modal visible={showTerms} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowTerms(false)}>
+        <View style={[globalStyles.modalOverlay, { flex: 1 }]}>
+          <View style={[globalStyles.modalContent, { flex: 1, padding: 0, marginTop: 40 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+              <Text style={globalStyles.modalTitle}>{t('terms_title') || "利用規約"}</Text>
+              <TouchableOpacity onPress={() => setShowTerms(false)}>
+                <X size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+              {[1, 2, 3, 4, 5, 6].map(num => {
+                const title = t(`term_${num}_title`);
+                const desc = t(`term_${num}_desc`);
+                if (!title && !desc) return null;
+                return (
+                  <View key={num} style={{ marginBottom: 24 }}>
+                    {title ? <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>{title}</Text> : null}
+                    {desc ? <Text style={{ color: '#aaa', fontSize: 14, lineHeight: 22 }}>{desc}</Text> : null}
+                  </View>
+                );
+              })} 
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
