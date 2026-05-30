@@ -18,9 +18,7 @@ We prioritize user privacy, ultimate speed, and security.
 
 ## 📱 Screenshots
 <p align="center">
-  <img src="https://via.placeholder.com/250x500.png?text=Dashboard" width="30%" />
-  <img src="https://via.placeholder.com/250x500.png?text=Swap" width="30%" />
-  <img src="https://via.placeholder.com/250x500.png?text=Settings" width="30%" />
+  <img width="1536" height="1024" alt="future" src="https://github.com/user-attachments/assets/4df56f62-affb-49b8-853d-8134a22a2517" />
 </p>
 
 ---
