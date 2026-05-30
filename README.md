@@ -18,7 +18,7 @@ We prioritize user privacy, ultimate speed, and security.
 
 ## 📱 Screenshots
 <p align="center">
-  <img width="1536" height="1024" alt="future" src="https://github.com/user-attachments/assets/4df56f62-affb-49b8-853d-8134a22a2517" />
+  <img width="1200" height="600" alt="future_dApp" src="https://github.com/user-attachments/assets/74053a9f-bdcf-4d20-ba11-91fc65666669" />
 </p>
 
 ---
