@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Dimensions, DeviceEventEmitter, ActivityIndicator } from 'react-native';
-import { ChevronLeft, AlertTriangle, Image as ImageIcon, Flame, RefreshCw, ArrowUpRight, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, AlertTriangle, Image as ImageIcon, Flame, RefreshCw, ArrowUpRight, Trash2, EyeOff } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { PublicKey, Transaction, Keypair, ComputeBudgetProgram, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { createBurnInstruction, createCloseAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { createBurnNftInstruction } from '@metaplex-foundation/mpl-token-metadata';
-
 import { styles as globalStyles } from '../styles/globalStyles';
+import { HeaderRow } from '../components/HeaderRow';
 import { useWalletStore } from '../state/walletStore';
 import { useConnectionStore } from '../state/connectionStore';
 import { ConfirmModal, SimpleAlertModal, SuccessModal } from '../components/ActionModals';
@@ -33,6 +32,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
 
   const [description, setDescription] = useState<string | null>(null);
   const [descLoading, setDescLoading] = useState(false);
+  const [currentSkin, setCurrentSkin] = useState<string | null>(null);
 
   if (!asset) return null;
 
@@ -45,8 +45,11 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
 
   const showBurnButton = !isNative && (asset.possibleSpam || !isToken || isEmpty || (!isMajor && assetValue < 0.1));
   const showSkinButton = !isToken;
+  const isCurrentSkin = currentSkin === asset.logoURI;
 
   useEffect(() => {
+    AsyncStorage.getItem('wallet_skin').then(setCurrentSkin);
+
     const fetchDescription = async () => {
       if (isNFT) {
         if (asset.description) setDescription(asset.description);
@@ -70,14 +73,32 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
     fetchDescription();
   }, [asset.mint, isToken, isNFT, asset.description]);
 
-  const handleSetSkin = async () => {
-    if (asset.logoURI) {
-      try {
+  const handleToggleSkin = async () => {
+    if (!asset.logoURI) return;
+    try {
+      if (isCurrentSkin) {
+        await AsyncStorage.removeItem('wallet_skin');
+        DeviceEventEmitter.emit('skinChanged', null);
+        setCurrentSkin(null);
+      } else {
         await AsyncStorage.setItem('wallet_skin', asset.logoURI);
         DeviceEventEmitter.emit('skinChanged', asset.logoURI);
-        onBack();
-      } catch (e) {}
-    }
+        setCurrentSkin(asset.logoURI);
+      }
+    } catch (e) {}
+  };
+
+  const handleHideAsset = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('hidden_assets');
+      const hiddenList = stored ? JSON.parse(stored) : [];
+      if (!hiddenList.includes(asset.mint)) {
+        hiddenList.push(asset.mint);
+        await AsyncStorage.setItem('hidden_assets', JSON.stringify(hiddenList));
+      }
+      DeviceEventEmitter.emit('hiddenAssetsChanged');
+      onBack();
+    } catch(e) {}
   };
 
   const handleBurn = async () => {
@@ -108,9 +129,7 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
           const [metadataPDA] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer()], METADATA_PROGRAM_ID);
           const [editionPDA] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mintPubkey.toBuffer(), Buffer.from("edition")], METADATA_PROGRAM_ID);
 
-          tx.add(
-            createBurnNftInstruction({ metadata: metadataPDA, owner: userPubkey, mint: mintPubkey, tokenAccount: tokenAccount, masterEditionAccount: editionPDA, splTokenProgram: TOKEN_PROGRAM_ID })
-          );
+          tx.add(createBurnNftInstruction({ metadata: metadataPDA, owner: userPubkey, mint: mintPubkey, tokenAccount: tokenAccount, masterEditionAccount: editionPDA, splTokenProgram: TOKEN_PROGRAM_ID }));
         } else {
           tx.add(createBurnInstruction(tokenAccount, mintPubkey, userPubkey, rawAmount, [], programId));
         }
@@ -160,21 +179,15 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
   };
 
   return (
-    <View style={localStyles.container}>
-      <View style={localStyles.header}>
-        <TouchableOpacity onPress={onBack} style={localStyles.backBtn}>
-          <ChevronLeft size={28} color="#aaa" />
-        </TouchableOpacity>
-        <Text style={localStyles.headerTitle}>{asset.name}</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={globalStyles.container}>
+      <HeaderRow title={asset.name} onBack={onBack} />
 
-      <ScrollView contentContainerStyle={localStyles.scrollContent}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         
         {asset.possibleSpam && (
-          <View style={localStyles.spamWarning}>
-            <AlertTriangle size={20} color="#f59e0b" />
-            <Text style={localStyles.spamText}>{t('spam_warning') || 'This asset was marked as possible spam.'}</Text>
+          <View style={[globalStyles.warningBox, { marginHorizontal: 16 }]}>
+            <AlertTriangle size={20} color="#ef4444" />
+            <Text style={globalStyles.warningText}>{t('spam_warning') || 'This asset was marked as possible spam.'}</Text>
           </View>
         )}
 
@@ -242,12 +255,12 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
         </View>
 
         {(description || descLoading) && (
-          <View style={localStyles.aboutContainer}>
-            <Text style={localStyles.aboutTitle}>{t('description') || 'Description'}</Text>
+          <View style={{ paddingHorizontal: 16, marginBottom: 32 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>{t('description') || 'Description'}</Text>
             {descLoading ? (
               <ActivityIndicator size="small" color="#555" style={{ alignSelf: 'flex-start', marginTop: 10 }} />
             ) : (
-              <Text style={localStyles.aboutText}>{description}</Text>
+              <Text style={{ color: '#aaa', fontSize: 14, lineHeight: 22 }}>{description}</Text>
             )}
           </View>
         )}
@@ -255,16 +268,25 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
         {(showSkinButton || showBurnButton) && (
           <>
             <Text style={globalStyles.sectionTitle}>{t('advanced_options') || 'Advanced Options'}</Text>
-            <View style={localStyles.advancedContainer}>
+            <View style={{ paddingHorizontal: 16, gap: 12 }}>
               
               {showSkinButton && (
                 <TouchableOpacity 
                   style={[localStyles.secondaryBtn, (!asset.logoURI || loading) && { opacity: 0.5 }]} 
-                  onPress={handleSetSkin}
+                  onPress={handleToggleSkin}
                   disabled={!asset.logoURI || loading}
                 >
-                  <ImageIcon size={20} color="#fff" style={{ marginRight: 12 }} />
-                  <Text style={localStyles.secondaryBtnText}>{t('set_as_skin') || 'Set as Background Skin'}</Text>
+                  <ImageIcon size={20} color={isCurrentSkin ? "#a855f7" : "#fff"} style={{ marginRight: 12 }} />
+                  <Text style={[localStyles.secondaryBtnText, isCurrentSkin && { color: '#a855f7' }]}>
+                    {isCurrentSkin ? (t('remove_skin') || 'Remove Background Skin') : (t('set_as_skin') || 'Set as Background Skin')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {showBurnButton && (
+                <TouchableOpacity style={localStyles.secondaryBtn} onPress={handleHideAsset}>
+                  <EyeOff size={20} color="#fff" style={{ marginRight: 12 }} />
+                  <Text style={localStyles.secondaryBtnText}>{t('hide_asset') || 'Hide (Move to Trash)'}</Text>
                 </TouchableOpacity>
               )}
 
@@ -295,13 +317,6 @@ export const AssetDetailScreen = ({ t, asset, onBack, onNavigate }: any) => {
 };
 
 const localStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 10, height: 60, backgroundColor: 'transparent' },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
-  scrollContent: { paddingBottom: 40 },
-  spamWarning: { flexDirection: 'row', backgroundColor: 'rgba(69, 26, 3, 0.9)', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#78350f' },
-  spamText: { color: '#fcd34d', flex: 1, fontSize: 14, fontWeight: '500', lineHeight: 20 },
   tokenHeaderContainer: { alignItems: 'center', paddingTop: 32, paddingBottom: 16, overflow: 'hidden' },
   tokenIconWrapper: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#333' },
   balanceAmount: { color: '#fff', fontSize: 36, fontWeight: 'bold', textAlign: 'center' },
@@ -311,12 +326,8 @@ const localStyles = StyleSheet.create({
   imagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   mainActionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 32 },
   tradeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12 },
-  advancedContainer: { paddingHorizontal: 16, gap: 12 },
   secondaryBtn: { flexDirection: 'row', backgroundColor: 'rgba(26, 26, 26, 0.8)', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   secondaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   burnBtn: { flexDirection: 'row', backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 16, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.4)' },
   burnBtnText: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
-  aboutContainer: { paddingHorizontal: 16, marginBottom: 32 },
-  aboutTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  aboutText: { color: '#aaa', fontSize: 14, lineHeight: 22, fontWeight: '400' },
 });

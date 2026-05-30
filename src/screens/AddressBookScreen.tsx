@@ -1,16 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { Plus, Copy, Trash2, QrCode } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { PublicKey } from '@solana/web3.js';
 import { Camera } from 'react-native-vision-camera';
-
 import { styles } from '../styles/globalStyles';
 import { HeaderRow } from '../components/HeaderRow';
 import { shortenAddress } from '../utils/solanaUtils';
 import { SimpleAlertModal, ConfirmModal } from '../components/ActionModals';
 import { QRScannerModal } from '../components/QRScannerModal';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { ADMOB_ANDROID_BANNER_ID as ADMOB_ANDROID_ENV } from '@env';
@@ -60,8 +58,12 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
 
   const handleOpenScanner = async () => {
     const permission = await Camera.requestCameraPermission();
-    if (permission === 'granted') setIsScanning(true);
-    else setAlert({ visible: true, title: t('error') || 'Error', message: t('camera_permission_denied') || 'Camera permission denied', type: 'error' });
+    if (permission === 'granted') {
+      setModalVisible(false);
+      setIsScanning(true);
+    } else {
+      setAlert({ visible: true, title: t('error') || 'Error', message: t('camera_permission_denied') || 'Camera permission denied', type: 'error' });
+    }
   };
 
   const handleScan = (scannedValue: string) => {
@@ -69,6 +71,7 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
     setIsScanning(false);
     const addressPart = value.replace('solana:', '').split('?')[0]; 
     setNewAddr(addressPart);
+    setModalVisible(true);
     notify(t('qr_scanned') || 'QR Scanned ✅');
   };
 
@@ -91,7 +94,6 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
           paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 20 : 40 
         }}
       >
-        {/* 🌟 修正: empty ではなく 翻訳ファイルの no_saved_wallets に変更 */}
         {contacts.length === 0 ? <Text style={styles.descText}>{t('no_saved_wallets') || 'No saved addresses'}</Text> : contacts.map((c: any, i: number) => (
           <View key={i} style={styles.settingItem}>
              <View style={{flex:1}}>
@@ -110,12 +112,14 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
         ))}
       </ScrollView>
 
-      {modalVisible && (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "padding"} style={styles.modalOverlay}>
+      <Modal visible={modalVisible} transparent={true} animationType="fade">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "padding"} 
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalContent, { height: 'auto', paddingBottom: 40 }]}>
             <Text style={styles.sectionTitle}>{t('add_new') || 'Add New'}</Text>
             
-            {/* 🌟 修正: name_placeholder ではなく 翻訳ファイルの name に変更 */}
             <TextInput 
               style={styles.inputField} 
               placeholder={t('name') || 'Name'} 
@@ -124,7 +128,6 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
               onChangeText={setNewName} 
             />
             <View style={{ position: 'relative', width: '100%', marginBottom: 16 }}>
-              {/* 🌟 修正: address_placeholder ではなく 翻訳ファイルの address に変更 */}
               <TextInput 
                 style={[styles.inputField, { marginBottom: 0, paddingRight: 50 }]} 
                 placeholder={t('address') || 'Address'} 
@@ -149,14 +152,14 @@ export const AddressBookScreen = ({ t, contacts, onSave, notify, onBack }: any) 
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      )}
+      </Modal>
 
-      {isScanning && <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />}
+      {isScanning && <QRScannerModal visible={isScanning} onClose={() => {setIsScanning(false); setModalVisible(true);}} onScan={handleScan} />}
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} type={alert.type} onClose={() => setAlert({ ...alert, visible: false })} />
       <ConfirmModal visible={confirm.visible} title={confirm.title} message={confirm.message} confirmText={t('delete') || 'Delete'} cancelText={t('cancel') || 'Cancel'} onCancel={() => setConfirm({ ...confirm, visible: false })} onConfirm={confirm.onConfirm} />
       
       {showBanner && (
-        <View style={[styles.bannerContainerFixed, { paddingBottom: insets.bottom }]}>
+        <View style={[styles.bannerContainerFixed, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
         </View>
       )}

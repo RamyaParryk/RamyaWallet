@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, StyleSheet, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { Users, ShieldCheck, Server, Globe, CircleHelp, Info, LogOut, ChevronRight } from 'lucide-react-native';
 
@@ -31,8 +31,8 @@ export const SettingsScreen: React.FC<Props> = ({ t, onNavigate, onLogout }) => 
   const adUnitId = useMemo(() => (Platform.OS === 'android' ? (ADMOB_ANDROID_ENV || '').trim() : ''), []);
   const showBanner = adUnitId.length > 0;
 
-  return (
-    <SafeAreaView style={globalStyles.container} edges={['top']}>
+return (
+    <View style={globalStyles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <Text style={localStyles.screenTitle}>{t('settings') || 'Settings'}</Text>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: showBanner ? BANNER_ESTIMATED_HEIGHT + 40 : 60 }}>
@@ -62,7 +62,7 @@ export const SettingsScreen: React.FC<Props> = ({ t, onNavigate, onLogout }) => 
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

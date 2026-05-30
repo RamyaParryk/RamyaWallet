@@ -153,4 +153,9 @@ export const styles = StyleSheet.create({
     paddingTop: 8,
     backgroundColor: 'rgba(0,0,0,0.8)',
   },
+
+  // 🌟 6. ボトムシート（下からスライドするモーダル）
+  bottomSheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  bottomSheetContent: { backgroundColor: '#1a1a1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
+  bottomSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
 });

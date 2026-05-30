@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert,
   Modal,
+  DeviceEventEmitter
 } from 'react-native';
 import {
   Copy,
@@ -23,11 +24,13 @@ import {
   BadgeCheck,
   Lock,
   X,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Eye 
 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Camera } from 'react-native-vision-camera';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWalletConnectStore } from '../state/walletConnectStore';
 import { styles as globalStyles } from '../styles/globalStyles';
 import { shortenAddress } from '../utils/solanaUtils';
@@ -79,22 +82,58 @@ const StakedAssetCard = ({ asset }: { asset: any }) => {
 export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue, onRefresh }: any) => {
   const [isScanning, setIsScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
-  
-  // 🌟 購入方法選択ポップアップの表示ステート
   const [isBuyModalVisible, setIsBuyModalVisible] = useState(false);
+  
+  // 🌟 モーダルと非表示状態の管理ステート
+  const [isTrashModalVisible, setIsTrashModalVisible] = useState(false);
+  const [hiddenMints, setHiddenMints] = useState<string[]>([]);
+
+  const loadHiddenAssets = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('hidden_assets');
+      if (stored) setHiddenMints(JSON.parse(stored));
+    } catch(e) {}
+  };
+
+  useEffect(() => {
+    loadHiddenAssets();
+    const subscription = DeviceEventEmitter.addListener('hiddenAssetsChanged', loadHiddenAssets);
+    return () => subscription.remove();
+  }, []);
+
+  // 🌟 スパム解除（ゴミ箱から元に戻す）処理
+  const handleUnhideAsset = async (mint: string) => {
+    try {
+      const stored = await AsyncStorage.getItem('hidden_assets');
+      if (stored) {
+        let list = JSON.parse(stored);
+        list = list.filter((m: string) => m !== mint);
+        await AsyncStorage.setItem('hidden_assets', JSON.stringify(list));
+        setHiddenMints(list);
+      }
+    } catch(e) {}
+  };
 
   const stakedAssets = assets.filter((a: any) => isStakedAsset(a.mint) && a.amount > 0);
 
   const tokens = assets.filter((a: any) =>
     !isStakedAsset(a.mint) &&
     a.decimals > 0 &&
-    a.amount > 0
+    a.amount > 0 &&
+    !hiddenMints.includes(a.mint)
   );
 
   const nfts = assets.filter((a: any) =>
     !isStakedAsset(a.mint) &&
     a.decimals === 0 &&
-    a.amount > 0
+    a.amount > 0 &&
+    !hiddenMints.includes(a.mint)
+  );
+
+  // 🌟 ゴミ箱に入っているNFTのみを抽出
+  const hiddenNfts = assets.filter((a: any) =>
+    a.decimals === 0 &&
+    hiddenMints.includes(a.mint)
   );
 
   const handleCopy = () => {
@@ -122,7 +161,6 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
     }
   };
 
-  // 🌟 購入リンクを開く処理
   const openBuyLink = (url: string) => {
     Linking.openURL(url);
     setIsBuyModalVisible(false);
@@ -161,10 +199,7 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
         <View style={localStyles.actionRow}>
           <ActionButton icon={ArrowDownLeft} label={t('receive') || 'Receive'} color="#3b82f6" onPress={() => onNavigate('receive')} />
           <ActionButton icon={Send} label={t('send') || 'Send'} color="#a855f7" onPress={() => onNavigate('send')} />
-          
-          {/* 🌟 買うボタンの挙動をポップアップ表示に変更 */}
           <ActionButton icon={CreditCard} label={t('buy') || 'Buy'} color="#22c55e" onPress={() => setIsBuyModalVisible(true)} />
-          
           <ActionButton icon={TrendingUp} label={t('stake') || 'Stake'} color="#f59e0b" onPress={() => onNavigate('stake')} />
         </View>
 
@@ -192,6 +227,21 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* 🌟 NFTsタブがアクティブのときだけ、右上に可愛い小さなゴミ箱ボタンを表示 */}
+        {activeTab === 'nfts' && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, marginBottom: 12 }}>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1a1a1a', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#333' }}
+              onPress={() => setIsTrashModalVisible(true)}
+            >
+              <Trash2 size={15} color="#888" />
+              <Text style={{ color: '#888', fontSize: 13, fontWeight: 'bold' }}>
+                {t('trash_bin') || 'Trash'} ({hiddenNfts.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {activeTab === 'tokens' && (
           <View style={globalStyles.card}>
@@ -267,7 +317,7 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
         <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />
       )}
 
-      {/* 🌟 購入方法選択ポップアップ */}
+      {/* 購入方法選択ポップアップ */}
       <Modal
         visible={isBuyModalVisible}
         transparent={true}
@@ -275,57 +325,110 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
         onRequestClose={() => setIsBuyModalVisible(false)}
       >
         <TouchableOpacity 
-          style={localStyles.modalOverlay} 
+          style={globalStyles.bottomSheetOverlay} 
           activeOpacity={1} 
           onPress={() => setIsBuyModalVisible(false)}
         >
-          <View style={localStyles.modalContent}>
-            <View style={localStyles.modalHeader}>
-              <Text style={localStyles.modalTitle}>{t('buy_crypto') || 'Buy Crypto'}</Text>
+          <View style={globalStyles.bottomSheetContent}>
+            <View style={globalStyles.bottomSheetHeader}>
+              <Text style={globalStyles.modalTitle}>{t('buy_crypto') || 'Buy Crypto'}</Text>
               <TouchableOpacity onPress={() => setIsBuyModalVisible(false)}>
                 <X size={24} color="#888" />
               </TouchableOpacity>
             </View>
             
-            <Text style={localStyles.modalSubTitle}>
-              決済プロバイダーまたは取引所を選択してください
+            <Text style={[globalStyles.descTextSmall, { marginBottom: 24 }]}>
+              {t('buy_select_provider') || 'Please select a payment provider or exchange'}
             </Text>
 
-            {/* クレカ決済プロバイダー */}
-            <TouchableOpacity style={localStyles.providerButton} onPress={() => openBuyLink('https://moonpay.com')}>
-              <View style={localStyles.providerInfo}>
-                <Text style={localStyles.providerName}>MoonPay</Text>
-                <Text style={localStyles.providerDesc}>クレジットカード・Apple Pay</Text>
+            <TouchableOpacity style={[globalStyles.settingItem, { justifyContent: 'space-between' }]} onPress={() => openBuyLink('https://moonpay.com')}>
+              <View style={{ flex: 1 }}>
+                <Text style={globalStyles.settingText}>MoonPay</Text>
+                <Text style={globalStyles.descTextSmall}>{t('buy_desc_applepay') || 'Credit Card / Apple Pay'}</Text>
               </View>
               <ExternalLink size={20} color="#888" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={localStyles.providerButton} onPress={() => openBuyLink('https://global.transak.com')}>
-              <View style={localStyles.providerInfo}>
-                <Text style={localStyles.providerName}>Transak</Text>
-                <Text style={localStyles.providerDesc}>クレジットカード・銀行振込</Text>
+            <TouchableOpacity style={[globalStyles.settingItem, { justifyContent: 'space-between' }]} onPress={() => openBuyLink('https://global.transak.com')}>
+              <View style={{ flex: 1 }}>
+                <Text style={globalStyles.settingText}>Transak</Text>
+                <Text style={globalStyles.descTextSmall}>{t('buy_desc_bank') || 'Credit Card / Bank Transfer'}</Text>
               </View>
               <ExternalLink size={20} color="#888" />
             </TouchableOpacity>
 
-            {/* 🌟 マネタイズ用：Mexcリファラルリンク */}
-            <TouchableOpacity style={[localStyles.providerButton, { borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' }]} onPress={() => openBuyLink('https://promote.mexc.com/r/2UFnLGg35l')}>
-              <View style={localStyles.providerInfo}>
-                <Text style={localStyles.providerName}>MEXC Global (Exchange)</Text>
-                <Text style={localStyles.providerDesc}>Low fees & Highly recommended</Text>
+            <TouchableOpacity style={[globalStyles.settingItem, { justifyContent: 'space-between', borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' }]} onPress={() => openBuyLink(MEXC_REFERRAL_URL)}>
+              <View style={{ flex: 1 }}>
+                <Text style={globalStyles.settingText}>MEXC Global (Exchange)</Text>
+                <Text style={globalStyles.descTextSmall}>{t('buy_desc_mexc') || 'Low fees & Highly recommended'}</Text>
               </View>
               <ExternalLink size={20} color="#3b82f6" />
             </TouchableOpacity>
 
-            {/* 🌟 マネタイズ用：Gate.ioリファラルリンク */}
-            <TouchableOpacity style={[localStyles.providerButton, { borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.05)' }]} onPress={() => openBuyLink('https://www.gate.io/signup/BFZAVA9d')}>
-              <View style={localStyles.providerInfo}>
-                <Text style={localStyles.providerName}>Gate.io (Exchange)</Text>
-                <Text style={localStyles.providerDesc}>Wide range of altcoins</Text>
+            <TouchableOpacity style={[globalStyles.settingItem, { justifyContent: 'space-between', borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.05)' }]} onPress={() => openBuyLink(GATEIO_REFERRAL_URL)}>
+              <View style={{ flex: 1 }}>
+                <Text style={globalStyles.settingText}>Gate.io (Exchange)</Text>
+                <Text style={globalStyles.descTextSmall}>{t('buy_desc_gateio') || 'Wide range of altcoins'}</Text>
               </View>
               <ExternalLink size={20} color="#a855f7" />
             </TouchableOpacity>
 
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 🌟 ゴミ箱（非表示NFT一覧）ポップアップ */}
+      <Modal
+        visible={isTrashModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsTrashModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={globalStyles.bottomSheetOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsTrashModalVisible(false)}
+        >
+          <View style={globalStyles.bottomSheetContent}>
+            <View style={globalStyles.bottomSheetHeader}>
+              <Text style={globalStyles.modalTitle}>{t('trash_bin') || 'Trash Bin'}</Text>
+              <TouchableOpacity onPress={() => setIsTrashModalVisible(false)}>
+                <X size={24} color="#888" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
+              {hiddenNfts.length === 0 ? (
+                <Text style={{ color: '#666', textAlign: 'center', paddingVertical: 40 }}>
+                  {t('no_spam_assets') || 'Trash is empty'}
+                </Text>
+              ) : (
+                hiddenNfts.map((nft: any, index: number) => (
+                  <View key={nft.mint || index} style={[globalStyles.settingItem, { justifyContent: 'space-between', marginBottom: 8 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      {nft.logoURI ? (
+                        <Image source={{ uri: nft.logoURI }} style={{ width: 40, height: 40, borderRadius: 8 }} />
+                      ) : (
+                        <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#222', justifyContent: 'center', alignItems: 'center' }}>
+                          <ImageIcon size={20} color="#555" />
+                        </View>
+                      )}
+                      <Text style={[globalStyles.settingText, { fontSize: 15, flexShrink: 1 }]} numberOfLines={1}>
+                        {nft.name}
+                      </Text>
+                    </View>
+                    
+                    {/* スパム解除（元に戻す）ボタン */}
+                    <TouchableOpacity 
+                      style={{ padding: 10, backgroundColor: 'rgba(168, 85, 247, 0.1)', borderRadius: 10 }}
+                      onPress={() => handleUnhideAsset(nft.mint)}
+                    >
+                      <Eye size={18} color="#a855f7" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -364,15 +467,4 @@ const localStyles = StyleSheet.create({
   nftCard: { width: (width - 44) / 2, backgroundColor: '#1a1a1a', borderRadius: 16, borderWidth: 1, borderColor: '#333', overflow: 'hidden', paddingBottom: 12 },
   nftImage: { width: '100%', aspectRatio: 1 },
   nftName: { color: '#fff', fontWeight: 'bold', fontSize: 14, marginTop: 12, paddingHorizontal: 12 },
-
-  // 🌟 Modal用スタイル
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#1a1a1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  modalSubTitle: { color: '#888', fontSize: 14, marginBottom: 24 },
-  providerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#222', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
-  providerInfo: { flex: 1 },
-  providerName: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  providerDesc: { color: '#888', fontSize: 13 },
 });
