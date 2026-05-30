@@ -18,9 +18,7 @@ RamyaWallet（ラミャ・ウォレット）は、Solanaブロックチェーン
 
 ## 📱 スクリーンショット
 <p align="center">
-  <img src="https://via.placeholder.com/250x500.png?text=Dashboard" width="30%" />
-  <img src="https://via.placeholder.com/250x500.png?text=Swap" width="30%" />
-  <img src="https://via.placeholder.com/250x500.png?text=Settings" width="30%" />
+  <img width="1200" height="600" alt="future_dApp" src="https://github.com/user-attachments/assets/74053a9f-bdcf-4d20-ba11-91fc65666669" />
 </p>
 
 ---
