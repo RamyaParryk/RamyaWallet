@@ -58,7 +58,7 @@ export const SettingsScreen: React.FC<Props> = ({ t, onNavigate, onLogout }) => 
 
       </ScrollView>
       {showBanner && (
-        <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}>
+        <View style={[globalStyles.bannerContainerFixed, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }]}>
           <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
         </View>
       )}
@@ -67,7 +67,7 @@ export const SettingsScreen: React.FC<Props> = ({ t, onNavigate, onLogout }) => 
 };
 
 const localStyles = StyleSheet.create({
-  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginBottom: 20 },
+  screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', textAlign: 'left', paddingHorizontal: 16, marginBottom: 20 },
   settingItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, backgroundColor: '#1a1a1a' },
   borderBottom: { borderBottomWidth: 1, borderBottomColor: '#333' },
   iconWrapper: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },

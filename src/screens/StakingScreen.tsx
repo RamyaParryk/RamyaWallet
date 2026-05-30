@@ -227,7 +227,11 @@ export const StakingScreen = ({ t, wallet, connection, notify, onBack, solBalanc
       <SuccessModal visible={showSuccess} message={t('stake_success_msg') || 'ステーキング完了！'} onDone={() => setShowSuccess(false)} />
       <SimpleAlertModal visible={alert.visible} title={alert.title} message={alert.message} onClose={() => setAlert({ ...alert, visible: false })} />
       
-      {showBanner && <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}><BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /></View>}
+      {showBanner && (
+          <View style={[globalStyles.bannerContainerFixed, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }]}>
+            <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
+          </View>
+        )}
     </View>
   );
 };

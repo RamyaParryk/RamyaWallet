@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import {
   Copy,
@@ -21,6 +22,8 @@ import {
   RefreshCw,
   BadgeCheck,
   Lock,
+  X,
+  ExternalLink
 } from 'lucide-react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Camera } from 'react-native-vision-camera';
@@ -30,6 +33,7 @@ import { styles as globalStyles } from '../styles/globalStyles';
 import { shortenAddress } from '../utils/solanaUtils';
 import { TokenIcon } from '../components/TokenIcon';
 import { QRScannerModal } from '../components/QRScannerModal';
+import { MEXC_REFERRAL_URL, GATEIO_REFERRAL_URL } from '../constants/config';
 
 const { width } = Dimensions.get('window');
 
@@ -75,6 +79,9 @@ const StakedAssetCard = ({ asset }: { asset: any }) => {
 export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue, onRefresh }: any) => {
   const [isScanning, setIsScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
+  
+  // 🌟 購入方法選択ポップアップの表示ステート
+  const [isBuyModalVisible, setIsBuyModalVisible] = useState(false);
 
   const stakedAssets = assets.filter((a: any) => isStakedAsset(a.mint) && a.amount > 0);
 
@@ -96,7 +103,6 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
 
   const handleScan = (data: string) => {
     setIsScanning(false);
-
     if (data.startsWith('wc:')) {
       useWalletConnectStore.getState().pair(data).catch(() => {});
     } else {
@@ -106,7 +112,6 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
 
   const handleOpenScanner = async () => {
     const permission = await Camera.requestCameraPermission();
-
     if (permission === 'granted') {
       setIsScanning(true);
     } else {
@@ -115,6 +120,12 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
         t('camera_permission_denied') || 'Camera permission denied.'
       );
     }
+  };
+
+  // 🌟 購入リンクを開く処理
+  const openBuyLink = (url: string) => {
+    Linking.openURL(url);
+    setIsBuyModalVisible(false);
   };
 
   return (
@@ -150,7 +161,10 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
         <View style={localStyles.actionRow}>
           <ActionButton icon={ArrowDownLeft} label={t('receive') || 'Receive'} color="#3b82f6" onPress={() => onNavigate('receive')} />
           <ActionButton icon={Send} label={t('send') || 'Send'} color="#a855f7" onPress={() => onNavigate('send')} />
-          <ActionButton icon={CreditCard} label={t('buy') || 'Buy'} color="#22c55e" onPress={() => Linking.openURL('https://moonpay.com')} />
+          
+          {/* 🌟 買うボタンの挙動をポップアップ表示に変更 */}
+          <ActionButton icon={CreditCard} label={t('buy') || 'Buy'} color="#22c55e" onPress={() => setIsBuyModalVisible(true)} />
+          
           <ActionButton icon={TrendingUp} label={t('stake') || 'Stake'} color="#f59e0b" onPress={() => onNavigate('stake')} />
         </View>
 
@@ -252,6 +266,70 @@ export const DashboardScreen = ({ t, onNavigate, wallet, assets = [], totalValue
       {isScanning && (
         <QRScannerModal visible={isScanning} onClose={() => setIsScanning(false)} onScan={handleScan} />
       )}
+
+      {/* 🌟 購入方法選択ポップアップ */}
+      <Modal
+        visible={isBuyModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsBuyModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={localStyles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsBuyModalVisible(false)}
+        >
+          <View style={localStyles.modalContent}>
+            <View style={localStyles.modalHeader}>
+              <Text style={localStyles.modalTitle}>{t('buy_crypto') || 'Buy Crypto'}</Text>
+              <TouchableOpacity onPress={() => setIsBuyModalVisible(false)}>
+                <X size={24} color="#888" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={localStyles.modalSubTitle}>
+              決済プロバイダーまたは取引所を選択してください
+            </Text>
+
+            {/* クレカ決済プロバイダー */}
+            <TouchableOpacity style={localStyles.providerButton} onPress={() => openBuyLink('https://moonpay.com')}>
+              <View style={localStyles.providerInfo}>
+                <Text style={localStyles.providerName}>MoonPay</Text>
+                <Text style={localStyles.providerDesc}>クレジットカード・Apple Pay</Text>
+              </View>
+              <ExternalLink size={20} color="#888" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={localStyles.providerButton} onPress={() => openBuyLink('https://global.transak.com')}>
+              <View style={localStyles.providerInfo}>
+                <Text style={localStyles.providerName}>Transak</Text>
+                <Text style={localStyles.providerDesc}>クレジットカード・銀行振込</Text>
+              </View>
+              <ExternalLink size={20} color="#888" />
+            </TouchableOpacity>
+
+            {/* 🌟 マネタイズ用：Mexcリファラルリンク */}
+            <TouchableOpacity style={[localStyles.providerButton, { borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)' }]} onPress={() => openBuyLink('https://promote.mexc.com/r/2UFnLGg35l')}>
+              <View style={localStyles.providerInfo}>
+                <Text style={localStyles.providerName}>MEXC Global (Exchange)</Text>
+                <Text style={localStyles.providerDesc}>Low fees & Highly recommended</Text>
+              </View>
+              <ExternalLink size={20} color="#3b82f6" />
+            </TouchableOpacity>
+
+            {/* 🌟 マネタイズ用：Gate.ioリファラルリンク */}
+            <TouchableOpacity style={[localStyles.providerButton, { borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.05)' }]} onPress={() => openBuyLink('https://www.gate.io/signup/BFZAVA9d')}>
+              <View style={localStyles.providerInfo}>
+                <Text style={localStyles.providerName}>Gate.io (Exchange)</Text>
+                <Text style={localStyles.providerDesc}>Wide range of altcoins</Text>
+              </View>
+              <ExternalLink size={20} color="#a855f7" />
+            </TouchableOpacity>
+
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </View>
   );
 };
@@ -286,4 +364,15 @@ const localStyles = StyleSheet.create({
   nftCard: { width: (width - 44) / 2, backgroundColor: '#1a1a1a', borderRadius: 16, borderWidth: 1, borderColor: '#333', overflow: 'hidden', paddingBottom: 12 },
   nftImage: { width: '100%', aspectRatio: 1 },
   nftName: { color: '#fff', fontWeight: 'bold', fontSize: 14, marginTop: 12, paddingHorizontal: 12 },
+
+  // 🌟 Modal用スタイル
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#1a1a1a', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  modalSubTitle: { color: '#888', fontSize: 14, marginBottom: 24 },
+  providerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#222', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
+  providerInfo: { flex: 1 },
+  providerName: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  providerDesc: { color: '#888', fontSize: 13 },
 });

@@ -5,22 +5,22 @@ import { ChevronLeft } from 'lucide-react-native';
 export const HeaderRow = ({ title, onBack, rightIcon }: any) => (
   <View style={localStyles.headerRow}>
     
-    {/* 左側：戻るボタン（ボタンがない時でもレイアウトを崩さないための固定幅） */}
-    <View style={localStyles.sideContainer}>
-      {onBack && (
+    {/* 左側：戻るボタン（固定幅をなくし、自然に配置） */}
+    {onBack && (
+      <View style={localStyles.sideContainer}>
         <TouchableOpacity onPress={onBack} style={localStyles.iconButton}>
-          <ChevronLeft size={28} color="#aaa" />
+          <ChevronLeft size={32} color="#fff" />
         </TouchableOpacity>
-      )}
-    </View>
+      </View>
+    )}
 
-    {/* 中央：タイトル */}
+    {/* 左寄せの大きなタイトル */}
     <Text style={localStyles.headerTitle} numberOfLines={1}>
       {title}
     </Text>
 
-    {/* 右側：追加アイコンなど（無い時でもレイアウトを崩さない） */}
-    <View style={[localStyles.sideContainer, { alignItems: 'flex-end' }]}>
+    {/* 右側：追加アイコンなど */}
+    <View style={localStyles.rightContainer}>
       {rightIcon}
     </View>
 
@@ -31,14 +31,13 @@ const localStyles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     height: 60,
     backgroundColor: 'transparent',
     marginBottom: 8,
   },
   sideContainer: {
-    width: 50, // 🌟 左右の幅を同じに固定することで、タイトルが絶対に中央になる
+    marginRight: 4, // タイトルとの間に少しだけ余白
     justifyContent: 'center',
   },
   iconButton: {
@@ -49,9 +48,13 @@ const localStyles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 24, // スワップ画面等と統一
     fontWeight: 'bold',
     color: '#fff',
-    textAlign: 'center',
+    textAlign: 'left',
   },
+  rightContainer: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  }
 });

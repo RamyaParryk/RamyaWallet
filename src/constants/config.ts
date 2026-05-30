@@ -51,6 +51,9 @@ export const LST_APY_APIS = {
 
 export const GITHUB_URL = "https://ramyaparryk.github.io/RamyaWallet/";
 export const PRIVACY_URL = "https://ramyaparryk.github.io/RamyaWallet/privacy_en.html";
+export const MEXC_REFERRAL_URL = "https://promote.mexc.com/r/2UFnLGg35l";
+export const GATEIO_REFERRAL_URL = "https://www.gate.io/signup/BFZAVA9d";
+
 
 export const MY_PLATFORM_FEE_BPS = 0;
 export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');

@@ -36,7 +36,8 @@ const FixedBannerAd = () => {
   if (!adUnitId) return null;
 
   return (
-    <View style={[globalStyles.bannerContainerFixed, { paddingBottom: insets.bottom }]}>
+    // Androidの場合は下の余白（insets.bottom）を無視してピッタリくっつける
+    <View style={[globalStyles.bannerContainerFixed, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 }]}>
       <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
     </View>
   );
@@ -46,16 +47,10 @@ const FixedBannerAd = () => {
 export const SecuritySettingsScreen = ({ t, wallet, biometrics, setBiometrics, hasPin, onSetupPin, onBack }: any) => {
   const [showKey, setShowKey] = useState(false);
   const [keyConfirm, setKeyConfirm] = useState(false);
-
-  // 🌟 指紋認証のトグルを安全かつ確実に処理する
   const handleBiometricsToggle = async (newValue: boolean) => {
     if (newValue) {
       if (!hasPin) {
-        Alert.alert(
-          t('error') || 'エラー', 
-          t('pin_required_for_biometrics') || '生体認証を有効にするには、まずPINを設定してください。'
-        );
-        onSetupPin();
+        onSetupPin(); 
         return;
       }
       
@@ -171,7 +166,8 @@ export const HelpScreen = ({ t, onBack }: any) => {
     { q: t('faq_nft_send_title') || 'Q. NFTはどうやって送るの？', a: t('faq_nft_send_desc'), icon: Send, color: '#10b981' },
     { q: t('faq_nft_bg_title') || 'Q. NFTをアプリの背景にできますか？', a: t('faq_nft_bg_desc'), icon: ImageIcon, color: '#6366f1' },
     { q: t('faq_nft_burn_title') || 'Q. スパムNFTを消すことはできますか？', a: t('faq_nft_burn_desc'), icon: Flame, color: '#f43f5e' },
-    { q: t('faq_nfc_compat') || 'Q. 他のウォレットアプリとも通信できますか？', a: t('faq_nfc_compat_desc'), icon: Smartphone, color: '#3b82f6' },
+    
+    { q: t('faq_nfc_compat') || 'Q. NFC決済は他のウォレットアプリとも通信できますか？', a: t('faq_nfc_compat_desc'), icon: Smartphone, color: '#3b82f6' },
     { q: t('faq_nfc_receive') || 'Q. 受け取る側の操作は？', a: t('faq_nfc_receive_desc'), icon: Download, color: '#22c55e' },
     { q: t('faq_nfc_amount') || 'Q. 金額を指定して受け取れますか？', a: t('faq_nfc_amount_desc'), icon: Coins, color: '#f59e0b' },
     { q: t('faq_nfc_send') || 'Q. 送る側の操作は？', a: t('faq_nfc_send_desc'), icon: Send, color: '#a855f7' },
@@ -184,19 +180,34 @@ export const HelpScreen = ({ t, onBack }: any) => {
     <View style={globalStyles.container}>
       <HeaderRow title={t('help') || 'Help & FAQ'} onBack={onBack} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: BANNER_ESTIMATED_HEIGHT + 40 }}>
-        <Text style={globalStyles.sectionTitle}>FAQ</Text>
+        
+        {/* 🌟 一般的な質問のタイトル */}
+        <Text style={[globalStyles.sectionTitle, { color: '#a855f7' }]}>
+          {t('general_faq') || '一般的な質問'}
+        </Text>
+        
         {faqs.map((faq, i) => {
           const IconComponent = faq.icon;
+          // 🌟 インデックス10（NFCの最初の質問）の前にセクションタイトルを挿入
+          const isNfcSectionStart = i === 10;
+
           return (
-            <View key={i} style={globalStyles.helpItemContainer}>
-              <View style={globalStyles.helpHeaderRow}>
-                <View style={[globalStyles.helpIconBadge, { backgroundColor: faq.color }]}>
-                  <IconComponent size={16} color="#fff" />
+            <React.Fragment key={i}>
+              {isNfcSectionStart && (
+                <Text style={[globalStyles.sectionTitle, { marginTop: 24, color: '#3b82f6' }]}>
+                  {t('nfc_faq_title') || 'NFCタッチ決済について'}
+                </Text>
+              )}
+              <View style={globalStyles.helpItemContainer}>
+                <View style={globalStyles.helpHeaderRow}>
+                  <View style={[globalStyles.helpIconBadge, { backgroundColor: faq.color }]}>
+                    <IconComponent size={16} color="#fff" />
+                  </View>
+                  <Text style={globalStyles.helpTitle}>{faq.q}</Text>
                 </View>
-                <Text style={globalStyles.helpTitle}>{faq.q}</Text>
+                <Text style={globalStyles.helpDesc}>{faq.a}</Text>
               </View>
-              <Text style={globalStyles.helpDesc}>{faq.a}</Text>
-            </View>
+            </React.Fragment>
           );
         })}
       </ScrollView>
@@ -266,7 +277,7 @@ export const AboutScreen = ({ t, onBack }: any) => {
                     {desc ? <Text style={{ color: '#aaa', fontSize: 14, lineHeight: 22 }}>{desc}</Text> : null}
                   </View>
                 );
-              })} 
+              })}
             </ScrollView>
           </View>
         </View>
