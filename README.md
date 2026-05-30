@@ -18,7 +18,7 @@ We prioritize user privacy, ultimate speed, and security.
 
 ## 📱 Screenshots
 <p align="center">
-  <img style="width: 100%; max-width: 600px; height: auto;" alt="RamyaWallet_dApp" src="https://github.com/user-attachments/assets/74053a9f-bdcf-4d20-ba11-91fc65666669" />
+  <img style="width: 100%; height: 100%; max-height: 600px;" alt="RamyaWallet_dApp" src="https://github.com/user-attachments/assets/74053a9f-bdcf-4d20-ba11-91fc65666669" />
 </p>
 
 ---
