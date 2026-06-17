@@ -14,27 +14,15 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.ratolab.ramyawallet"
+    namespace "com.ratolab.ramyawallet.sol"
     defaultConfig {
-        applicationId "com.ratolab.ramyawallet"
+        applicationId "com.ratolab.ramyawallet.sol"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 18
         versionName "1.8.0"
     }
 
-    // ここからフレーバー
-    flavorDimensions "store"
-
-    productFlavors {
-        playstore {
-            dimension "store"
-        }
-        solanastore {
-            dimension "store"
-            applicationIdSuffix ".sol"
-        }
-    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

@@ -1,4 +1,4 @@
-package com.ratolab.ramyawallet
+package com.ratolab.ramyawallet.sol
 
 import android.app.Application
 import com.facebook.react.PackageList
